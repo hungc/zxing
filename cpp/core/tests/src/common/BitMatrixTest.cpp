@@ -21,6 +21,9 @@
 #include "BitMatrixTest.h"
 #include <limits>
 #include <stdlib.h>
+#if defined(__QNX__)
+#include <time.h>
+#endif
 
 namespace zxing {
 using namespace std;
@@ -28,7 +31,11 @@ using namespace std;
 CPPUNIT_TEST_SUITE_REGISTRATION(BitMatrixTest);
 
 BitMatrixTest::BitMatrixTest() {
+#if defined(__QNX__)
+  srand((int) time( NULL ));
+#else
   srand(getpid());
+#endif
 }
 
 void BitMatrixTest::testGetSet() {

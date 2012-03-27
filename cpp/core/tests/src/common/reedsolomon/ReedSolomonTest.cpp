@@ -115,7 +115,11 @@ void ReedSolomonTest::checkQRRSDecode(ArrayRef<int> &received) {
 void ReedSolomonTest::corrupt(ArrayRef<int> &received, int howMany) {
   vector<bool> corrupted(received->size());
   for (int j = 0; j < howMany; j++) {
-    int location = floor(received->size() * ((double)(random() >> 1) / (double)((RAND_MAX >> 1) + 1)));
+#if defined(__QNX__)
+  int location = floor(received->size() * ((double)(rand() >> 1) / (double)((RAND_MAX >> 1) + 1)));
+#else
+  int location = floor(received->size() * ((double)(random() >> 1) / (double)((RAND_MAX >> 1) + 1)));
+#endif
     if (corrupted[location]) {
       j--;
     } else {
