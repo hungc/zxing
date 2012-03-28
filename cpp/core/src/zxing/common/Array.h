@@ -30,6 +30,7 @@
 
 #include <zxing/common/Counted.h>
 
+#include <stddef.h>
 
 namespace zxing {
 

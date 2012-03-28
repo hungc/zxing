@@ -23,6 +23,8 @@
 #include <vector>
 #include <limits>
 
+#include <stddef.h>
+
 namespace zxing {
 
 #define ZX_LOG_DIGITS(digits) \
