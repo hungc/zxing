@@ -27,6 +27,7 @@
 #include <zxing/common/reedsolomon/GenericGF.h>
 #include <iostream>
 #include <cmath>
+#include <math.h>
 #include <zxing/NotFoundException.h>
 
 using zxing::aztec::Detector;
