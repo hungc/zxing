@@ -17,7 +17,7 @@
 TEMPLATE = lib
 TARGET = zxing
 
-CONFIG += warn_on debug_and_release cascades
+CONFIG += warn_on debug_and_release
 
 INCLUDEPATH += ../src
 SOURCES += ../src/zxing/*.cpp \
