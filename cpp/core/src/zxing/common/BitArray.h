@@ -26,6 +26,8 @@
 #include <limits>
 #include <iostream>
 
+#include <stddef.h>
+
 namespace zxing {
 
 class BitArray : public Counted {

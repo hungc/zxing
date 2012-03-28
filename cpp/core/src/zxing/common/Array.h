@@ -25,6 +25,8 @@
 
 #include <zxing/common/Counted.h>
 
+#include <stddef.h>
+
 namespace zxing {
 
 template<typename T> class Array : public Counted {
