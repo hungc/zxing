@@ -20,7 +20,7 @@ TARGET = zxing
 CONFIG += warn_on debug_and_release
 
 INCLUDEPATH += ../src
-INCLUDEPATH += "f:/ndk-2.0.0-workspace/cppunit/include"
+INCLUDEPATH += ../cppunit/include
 
 SOURCES += ../src/zxing/*.cpp \
     ../src/zxing/aztec/*.cpp \
