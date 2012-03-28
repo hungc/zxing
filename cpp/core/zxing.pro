@@ -17,6 +17,9 @@
 TEMPLATE = lib
 TARGET = zxing
 
+QT -= gui
+QT -= core
+
 CONFIG += warn_on debug_and_release
 
 INCLUDEPATH += ../src
