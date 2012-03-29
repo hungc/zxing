@@ -57,18 +57,22 @@ HEADERS += src/*.h\
 device {
     CONFIG(release, debug|release) {        
         DESTDIR = o.le-v7       
+        CPPUNIT_LIBDIR = ../../cppunit/Device-Release
     } 
     CONFIG(debug, debug|release) {
         DESTDIR = o.le-v7-g
+        CPPUNIT_LIBDIR = ../../cppunit/Device-Debug
     }
 }
 
 simulator {
     CONFIG(release, debug|release) {
         DESTDIR = o
+        CPPUNIT_LIBDIR = ../../cppunit/Simulator-Debug
     } 
     CONFIG(debug, debug|release) {
         DESTDIR = o-g
+        CPPUNIT_LIBDIR = ../../cppunit/Simulator-Debug
     }
 }
 
@@ -77,8 +81,8 @@ MOC_DIR = $${DESTDIR}/.moc
 RCC_DIR = $${DESTDIR}/.rcc
 UI_DIR = $${DESTDIR}/.ui
 
-LIBS += -L../../cppunit/Device-Release -lcppunit
-LIBS += -L../../zxing-2.0/arm/o.le-v7/ -lzxing
+LIBS += -L$${CPPUNIT_LIBDIR} -lcppunit
+LIBS += -L../../zxing-2.0/arm/$${DESTDIR}/ -lzxing
 LIBS += "-L${QNX_TARGET}/armle-v7/usr/lib" -liconv
 
 QT -= gui

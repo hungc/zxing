@@ -19,6 +19,12 @@ $(QMAKE_TARGET): device simulator
 device:
 	$(MAKE) -C ./arm -f Makefile all
 
+Device-Debug: Makefile
+	$(MAKE) -C ./arm -f Makefile debug
+	
+Device-Release: Makefile
+	$(MAKE) -C ./arm -f Makefile release
+
 simulator:
 # No x86 version of cascades available, yet.
 #	$(MAKE) -C ./x86 -f Makefile all
