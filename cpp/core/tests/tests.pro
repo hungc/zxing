@@ -20,24 +20,24 @@ TARGET = zxing
 CONFIG += warn_on debug_and_release
 
 INCLUDEPATH += ../../cppunit/include
-INCLUDEPATH += ../../zxing-2.0/src
-INCLUDEPATH += ../../zxing-2.0/src/zxing
-INCLUDEPATH += ../../zxing-2.0/src/zxing/aztec
-INCLUDEPATH += ../../zxing-2.0/src/zxing/aztec/decoder
-INCLUDEPATH += ../../zxing-2.0/src/zxing/aztec/detector
-INCLUDEPATH += ../../zxing-2.0/src/zxing/common
-INCLUDEPATH += ../../zxing-2.0/src/zxing/common/detector
-INCLUDEPATH += ../../zxing-2.0/src/zxing/common/reedsolomon
-INCLUDEPATH += ../../zxing-2.0/src/zxing/datamatrix
-INCLUDEPATH += ../../zxing-2.0/src/zxing/datamatrix/decoder
-INCLUDEPATH += ../../zxing-2.0/src/zxing/datamatrix/detector
-INCLUDEPATH += ../../zxing-2.0/src/zxing/multi
-INCLUDEPATH += ../../zxing-2.0/src/zxing/multi/qrcode
-INCLUDEPATH += ../../zxing-2.0/src/zxing/multi/qrcode/detector
-INCLUDEPATH += ../../zxing-2.0/src/zxing/oned
-INCLUDEPATH += ../../zxing-2.0/src/zxing/qrcode
-INCLUDEPATH += ../../zxing-2.0/src/zxing/qrcode/decoder
-INCLUDEPATH += ../../zxing-2.0/src/zxing/zxing/qrcode/detector
+INCLUDEPATH += ../../zxing/src
+INCLUDEPATH += ../../zxing/src/zxing
+INCLUDEPATH += ../../zxing/src/zxing/aztec
+INCLUDEPATH += ../../zxing/src/zxing/aztec/decoder
+INCLUDEPATH += ../../zxing/src/zxing/aztec/detector
+INCLUDEPATH += ../../zxing/src/zxing/common
+INCLUDEPATH += ../../zxing/src/zxing/common/detector
+INCLUDEPATH += ../../zxing/src/zxing/common/reedsolomon
+INCLUDEPATH += ../../zxing/src/zxing/datamatrix
+INCLUDEPATH += ../../zxing/src/zxing/datamatrix/decoder
+INCLUDEPATH += ../../zxing/src/zxing/datamatrix/detector
+INCLUDEPATH += ../../zxing/src/zxing/multi
+INCLUDEPATH += ../../zxing/src/zxing/multi/qrcode
+INCLUDEPATH += ../../zxing/src/zxing/multi/qrcode/detector
+INCLUDEPATH += ../../zxing/src/zxing/oned
+INCLUDEPATH += ../../zxing/src/zxing/qrcode
+INCLUDEPATH += ../../zxing/src/zxing/qrcode/decoder
+INCLUDEPATH += ../../zxing/src/zxing/qrcode/detector
 
 SOURCES += ../src/*.cpp \
     ../src/common/*.cpp \
@@ -45,8 +45,7 @@ SOURCES += ../src/*.cpp \
     ../src/qrcode/*.cpp \
     ../src/qrcode/decoder/*.cpp
    
-HEADERS += src/*.h\
-    ../src/common/*.h \
+HEADERS += ../src/common/*.h \
     ../src/common/reedsolomon/*.h \
     ../src/qrcode/*.h \
     ../src/qrcode/decoder/*.h
@@ -65,16 +64,7 @@ device {
     }
 }
 
-simulator {
-    CONFIG(release, debug|release) {
-        DESTDIR = o
-        CPPUNIT_LIBDIR = ../../cppunit/Simulator-Debug
-    } 
-    CONFIG(debug, debug|release) {
-        DESTDIR = o-g
-        CPPUNIT_LIBDIR = ../../cppunit/Simulator-Debug
-    }
-}
+# Simulator isn't supported because CppUnit doesn't build for the simulator 
 
 OBJECTS_DIR = $${DESTDIR}/.obj
 MOC_DIR = $${DESTDIR}/.moc
@@ -82,7 +72,7 @@ RCC_DIR = $${DESTDIR}/.rcc
 UI_DIR = $${DESTDIR}/.ui
 
 LIBS += -L$${CPPUNIT_LIBDIR} -lcppunit
-LIBS += -L../../zxing-2.0/arm/$${DESTDIR}/ -lzxing
+LIBS += -L../../zxing/arm/$${DESTDIR}/ -lzxing
 LIBS += "-L${QNX_TARGET}/armle-v7/usr/lib" -liconv
 
 QT -= gui
