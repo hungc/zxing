@@ -46,7 +46,7 @@ HEADERS += ../src/zxing/*.h \
     ../src/zxing/aztec/decoder/*.h \
     ../src/zxing/aztec/detector/*.h \
     ../src/zxing/common/*.h \
-    ../src/zxing/common/dectector/*.h \
+    ../src/zxing/common/detector/*.h \
     ../src/zxing/common/reedsolomon/*.h \
     ../src/zxing/datamatrix/*.h \
     ../src/zxing/datamatrix/decoder/*.h  \
