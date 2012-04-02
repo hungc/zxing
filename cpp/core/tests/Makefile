@@ -10,11 +10,10 @@ all: Makefile $(QMAKE_TARGET)
 
 Makefile: FORCE	
 	$(QMAKE) -spec unsupported/blackberry-armv7le-g++ -o arm/Makefile $(QMAKE_TARGET).pro CONFIG+=device
-	$(QMAKE) -spec win32-g++ -o x86/Makefile $(QMAKE_TARGET).pro CONFIG+=simulator
 
 FORCE:
 
-$(QMAKE_TARGET): device simulator
+$(QMAKE_TARGET): device
 
 device:
 	$(MAKE) -C ./arm -f Makefile all
@@ -24,7 +23,3 @@ Device-Debug: Makefile
 	
 Device-Release: Makefile
 	$(MAKE) -C ./arm -f Makefile release
-
-simulator:
-# No x86 version of cascades available, yet.
-#	$(MAKE) -C ./x86 -f Makefile all
