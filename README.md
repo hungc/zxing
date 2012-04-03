@@ -22,7 +22,7 @@ Please direct all inquiries about zxing to Clifford Hung (chung@rim.com).
 10. Click "Finish" button.
 11. "zxing" will appear in your "Project Explorer".  Right click it and click "Build Project" from the menu that appears. 
 
-The following optional instructions are for building the tests. You can find the unittest library at git@git.rim.net:/slipstream/unittest.git.  Please clone that library and follow the same general instructions above except navigating to the root directory of the unittest module.  After that, please follow the same general instructions above except navigating to cpp/core/tests in zxing.
+The following optional instructions are for building the tests. You can find the unittest library at git@github.rim.net:/chung/cppunit.git.  Please clone that library and follow the same general instructions above except navigating to the root directory of the unittest module.  After that, please follow the same general instructions above except navigating to cpp/core/tests in zxing.
 
 
 ### Notes
