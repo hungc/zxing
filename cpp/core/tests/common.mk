@@ -13,7 +13,7 @@ EXTRA_SRCVPATH+=$(PRODUCT_ROOT)/tests/src/common/reedsolomon
 EXTRA_SRCVPATH+=$(PRODUCT_ROOT)/tests/src/qrcode
 EXTRA_SRCVPATH+=$(PRODUCT_ROOT)/tests/src/qrcode/decoder
 
-EXTRA_INCVPATH+=$(PRODUCT_ROOT)/src
+EXTRA_INCVPATH+=$(PRODUCT_ROOT)/public
 EXTRA_INCVPATH+=$(PRODUCT_ROOT)/tests
 
 LIBS+=m
@@ -22,6 +22,7 @@ LIBS+=m
 EXTRA_INCVPATH+=$(PRODUCT_ROOT)/../../../cppunit/include
 EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/Device-Debug
 LIBS+=cppunit
+LIBPREF_cppunit = -Bstatic
 
 define PINFO
 PINFO DESCRIPTION=ZXing barcode decoder test app
@@ -39,13 +40,13 @@ include $(MKFILES_ROOT)/qtargets.mk
 # Use the QNX build system's $(VARIANT_LIST) to determine whether to use
 # debugging libraries, etc.
 ifeq ($(filter g,$(VARIANT_LIST)),g)
-  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/lib/arm/a-le-v7-g
+  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/arm/a-le-v7-g
   LIBS+=zxing_g
   CCFLAGS += -O0
 else
   # Non-debug build.
   #
-  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/lib/arm/a-le-v7
+  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/arm/a-le-v7
   LIBS+=zxing
 
   # Enable optimizations suitable for modern C++.
