@@ -10,9 +10,6 @@ include $(QCONFIG)
 NAME=zxing
 SO_VERSION=2.0
 
-# Default installation path for make install target
-INSTALL_ROOT_nto=$(PROJECT_ROOT)/stage/target/qnx6
-
 EXTRA_SRCVPATH+=$(PROJECT_ROOT)/src
 EXTRA_SRCVPATH+=$(PROJECT_ROOT)/src/zxing
 EXTRA_SRCVPATH+=$(PROJECT_ROOT)/src/zxing/datamatrix
