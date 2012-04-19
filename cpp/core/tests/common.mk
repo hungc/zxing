@@ -20,8 +20,6 @@ LIBS+=m
 
 # CppUnit
 EXTRA_INCVPATH+=$(PRODUCT_ROOT)/../../../cppunit/include
-EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/Device-Debug
-LIBS+=cppunit
 LIBPREF_cppunit = -Bstatic
 
 define PINFO
@@ -40,17 +38,39 @@ include $(MKFILES_ROOT)/qtargets.mk
 # Use the QNX build system's $(VARIANT_LIST) to determine whether to use
 # debugging libraries, etc.
 ifeq ($(filter g,$(VARIANT_LIST)),g)
-  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/arm/a-le-v7-g
-  LIBS+=zxing_g
-  CCFLAGS += -O0
+    CCFLAGS += -O0
+    LIBS+=cppunit_g
+    LIBS+=zxing_g
 else
-  # Non-debug build.
-  #
-  EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/arm/a-le-v7
-  LIBS+=zxing
-
-  # Enable optimizations suitable for modern C++.
-  CCFLAGS += -O3
+    # Non-debug build.
+    #
+    # Enable optimizations suitable for modern C++.
+    CCFLAGS += -O3
+    LIBS+=cppunit
+    LIBS+=zxing
 endif
 
+ifeq ($(CPU),arm)
+    ifeq ($(filter g,$(VARIANT_LIST)),g)
+        EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/$(CPU)/a-le-v7-g
+        EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/$(CPU)/a-le-v7-g
+    else
+        # Non-debug build.
+        #
+        EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/$(CPU)/a-le-v7
+        EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/$(CPU)/a-le-v7
+    endif
+else
+    ifeq ($(CPU),x86)
+        ifeq ($(filter g,$(VARIANT_LIST)),g)
+            EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/$(CPU)/a-g
+            EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/$(CPU)/a-g
+        else
+            # Non-debug build.
+            #
+            EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/../../../cppunit/$(CPU)/a
+            EXTRA_LIBVPATH+=$(PRODUCT_ROOT)/$(CPU)/a
+        endif
+    endif
+endif
 
