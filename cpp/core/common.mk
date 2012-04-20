@@ -53,5 +53,5 @@ else
   # Non-debug build.
   #
   # Enable optimizations suitable for modern C++.
-  CCFLAGS += -O3
+  CCFLAGS += -Os
 endif
