@@ -2,7 +2,7 @@
  
 Officially sanctioned port of zxing to the Blackberry/QNX platform. To avoid fragmentation, please do not use any other version of zxing.  Furthermore, do not expose any zxing constructs in public APIs.
 
-Please direct all inquiries about zxing to Clifford Hung (chung@rim.com).
+Please direct all inquiries about zxing to Eduardo Pelegri-Llopart (epelegrillopart@rim.com).
 
 ### Prerequisites
 
@@ -17,7 +17,7 @@ Please direct all inquiries about zxing to Clifford Hung (chung@rim.com).
 
 ### Building the tests 
 
-The CppUnit library is required to compile the unit tests. A port is hosted at git@github.rim.net:/chung/cppunit.git.  Please clone that repo and follow the same general instructions above except navigating to the root directory of the CppUnit module.  
+The CppUnit library is required to compile the unit tests. A port is hosted at git@github.com:blackberry/CppUnit.git.  Please clone that repo and follow the same general instructions above except navigating to the root directory of the CppUnit module.  
 
 1. Ensure that the cppunit project is located at the same directory level as the zxing project, as this is what the Makefile expects.
 2. From the command-line, change to the zxing/cpp/core/tests directory.
