@@ -29,7 +29,11 @@ using zxing::DecodeHints;
 // VC++
 using zxing::BarcodeFormat;
 
+#ifndef _MSC_VER
+// since this is a static const int that is assigned as part of the declaration in the header,
+// I don't know why it needs to be redeclared here.  And in fact, MS complains about multiply defined symbols on link if it is defined here.
 const DecodeHintType DecodeHints::CHARACTER_SET;
+#endif
 
 const DecodeHints DecodeHints::PRODUCT_HINT(
   UPC_A_HINT |

@@ -29,6 +29,11 @@ using zxing::qrcode::AlignmentPatternFinder;
 using zxing::qrcode::AlignmentPattern;
 
 // VC++
+#ifdef _MSC_VER
+static const float fNAN = std::numeric_limits<float>::quiet_NaN();
+#define NAN fNAN
+#define isnan _isnan
+#endif
 
 using zxing::BitMatrix;
 using zxing::ResultPointCallback;

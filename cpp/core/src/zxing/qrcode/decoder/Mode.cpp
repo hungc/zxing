@@ -27,6 +27,7 @@
 #include <sstream>
 
 using zxing::qrcode::Mode;
+using zxing::qrcode::Version;
 using std::ostringstream;
 
 // VC++

@@ -25,6 +25,7 @@
 #include <zxing/common/IllegalArgumentException.h>
 
 using zxing::GenericGFPoly;
+using zxing::GenericGF;
 using zxing::ArrayRef;
 using zxing::Ref;
 

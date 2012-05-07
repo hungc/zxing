@@ -40,6 +40,12 @@ using zxing::ResultPointCallback;
 using zxing::ResultPoint;
 using zxing::DecodeHints;
 
+#ifdef _MSC_VER
+static const float fNAN = std::numeric_limits<float>::quiet_NaN();
+#define NAN fNAN
+#define isnan _isnan
+#endif
+
 namespace {
 
 class FurthestFromAverageComparator {

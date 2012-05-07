@@ -31,6 +31,12 @@
 #include <sstream>
 #include <cstdlib>
 
+#ifdef _MSC_VER
+static const float fNAN = std::numeric_limits<float>::quiet_NaN();
+#define NAN fNAN
+#define isnan _isnan
+#endif
+
 using std::ostringstream;
 using std::abs;
 using std::min;
