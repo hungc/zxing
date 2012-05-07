@@ -25,7 +25,8 @@ The CppUnit library is required to compile the unit tests. A port is hosted at g
 
 ### Notes
 
-- Building on Linux from command-line works. Mac and Windows have not been tested.
+- Building on Linux from command-line works. Mac and Windows command-line builds have not been tested.
+- The build works with Visual Studio 2008 on Windows but no project files are provided.
 
 ### TODO
 
