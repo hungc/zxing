@@ -20,7 +20,6 @@ LIBS+=m
 
 # CppUnit
 EXTRA_INCVPATH+=$(PRODUCT_ROOT)/../../../cppunit/include
-LIBPREF_cppunit = -Bstatic
 
 define PINFO
 PINFO DESCRIPTION=ZXing barcode decoder test app
