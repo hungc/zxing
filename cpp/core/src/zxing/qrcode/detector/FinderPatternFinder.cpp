@@ -345,7 +345,7 @@ vector< Ref<FinderPattern> > FinderPatternFinder::selectBestPatterns() {
       square += size * size;
     }
     float average = totalModuleSize / (float) startSize;
-    float stdDev = (float)sqrt(square / startSize - average * average);
+    float stdDev = (float)std::sqrt(square / startSize - average * average);
 
     sort(possibleCenters_.begin(), possibleCenters_.end(), FurthestFromAverageComparator(average));
     
@@ -426,7 +426,7 @@ vector<Ref<FinderPattern> > FinderPatternFinder::orderBestPatterns(vector<Ref<Fi
 float FinderPatternFinder::distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2) {
   float dx = p1->getX() - p2->getX();
   float dy = p1->getY() - p2->getY();
-  return (float)sqrt(dx * dx + dy * dy);
+  return (float)std::sqrt(dx * dx + dy * dy);
 }
 
 FinderPatternFinder::FinderPatternFinder(Ref<BitMatrix> image,

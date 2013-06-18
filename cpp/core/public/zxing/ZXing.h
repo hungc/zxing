@@ -52,9 +52,14 @@ inline float nan() {return std::numeric_limits<float>::quiet_NaN();}
 #include <cmath>
 
 namespace zxing {
-inline bool isnan(float v) {return std::isnan(v);}
-inline bool isnan(double v) {return std::isnan(v);}
-inline float nan() {return std::numeric_limits<float>::quiet_NaN();}
+#if defined(__QNX__)
+  inline bool (isnan)(float v) {return isnan(v);}
+  inline bool (isnan)(double v) {return isnan(v);}
+#else
+  inline bool isnan(float v) {return std::isnan(v);}
+  inline bool isnan(double v) {return std::isnan(v);}
+#endif
+inline float (nan)() {return std::numeric_limits<float>::quiet_NaN();}
 }
 
 #endif

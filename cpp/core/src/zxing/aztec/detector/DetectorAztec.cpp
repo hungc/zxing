@@ -544,5 +544,5 @@ bool Detector::isValid(int x, int y) {
 }
         
 float Detector::distance(Ref<zxing::aztec::Point> a, Ref<zxing::aztec::Point> b) {
-  return sqrtf((float)((a->getX() - b->getX()) * (a->getX() - b->getX()) + (a->getY() - b->getY()) * (a->getY() - b->getY())));
+  return std::sqrtf((float)((a->getX() - b->getX()) * (a->getX() - b->getX()) + (a->getY() - b->getY()) * (a->getY() - b->getY())));
 }

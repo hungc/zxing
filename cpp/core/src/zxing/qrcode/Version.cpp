@@ -208,7 +208,7 @@ Ref<BitMatrix> Version::buildFunctionPattern() {
 }
 
 static vector<int> *intArray(size_t n...) {
-  va_list ap;
+  std::va_list ap;
   va_start(ap, n);
   vector<int> *result = new vector<int>(n);
   for (size_t i = 0; i < n; i++) {

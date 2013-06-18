@@ -217,7 +217,7 @@ vector<vector<Ref<FinderPattern> > > MultiFinderPatternFinder::selectBestPattern
           continue;
         }
         // Calculate the diagonal length by assuming a 90° angle at topleft
-        float dCpy = (float) sqrt(dA * dA + dB * dB);
+        float dCpy = (float) std::sqrt(dA * dA + dB * dB);
         // Compare to the real distance in %
         float vPyC = abs((dC - dCpy) / min(dC, dCpy));
         if (vPyC >= 0.1f) {
