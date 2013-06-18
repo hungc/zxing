@@ -8,7 +8,7 @@ include $(QCONFIG)
 #####################################
 
 NAME=zxing
-SO_VERSION=2.0
+SO_VERSION=2.2
 
 EXTRA_SRCVPATH+=$(PROJECT_ROOT)/src
 EXTRA_SRCVPATH+=$(PROJECT_ROOT)/src/zxing
