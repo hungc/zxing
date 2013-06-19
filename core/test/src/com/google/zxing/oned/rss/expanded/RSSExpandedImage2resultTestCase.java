@@ -42,6 +42,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.BufferedImageLuminanceSource;
 import com.google.zxing.NotFoundException;
+import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.client.result.ExpandedProductParsedResult;
 import com.google.zxing.client.result.ParsedResult;
@@ -61,9 +62,10 @@ public final class RSSExpandedImage2resultTestCase extends Assert {
   @Test
   public void testDecodeRow2result_2() throws Exception {
     // (01)90012345678908(3103)001750
-    String path = "test/data/blackbox/rssexpanded-1/2.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/2.png";
     ExpandedProductParsedResult expected =
-        new ExpandedProductParsedResult("90012345678908",
+        new ExpandedProductParsedResult("(01)90012345678908(3103)001750",
+                                        "90012345678908",
                                         null, null, null, null, null, null,
                                         "001750",
                                         ExpandedProductParsedResult.KILOGRAM,
@@ -74,7 +76,6 @@ public final class RSSExpandedImage2resultTestCase extends Assert {
 
   private static void assertCorrectImage2result(String path, ExpandedProductParsedResult expected)
       throws IOException, NotFoundException {
-    RSSExpandedReader rssExpandedReader = new RSSExpandedReader();
 
     File file = new File(path);
     if (!file.exists()) {
@@ -87,7 +88,14 @@ public final class RSSExpandedImage2resultTestCase extends Assert {
     int rowNumber = binaryMap.getHeight() / 2;
     BitArray row = binaryMap.getBlackRow(rowNumber, null);
 
-    Result theResult = rssExpandedReader.decodeRow(rowNumber, row, null);
+    Result theResult;
+    try {
+      RSSExpandedReader rssExpandedReader = new RSSExpandedReader();
+      theResult = rssExpandedReader.decodeRow(rowNumber, row, null);
+    } catch (ReaderException re) {
+      fail(re.toString());
+      return;
+    }
 
     assertSame(BarcodeFormat.RSS_EXPANDED, theResult.getBarcodeFormat());
 

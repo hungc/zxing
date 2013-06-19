@@ -19,12 +19,15 @@ package com.google.zxing.client.android.history;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ListActivity;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -37,8 +40,7 @@ import java.util.List;
 
 public final class HistoryActivity extends ListActivity {
 
-  private static final int SEND_ID = Menu.FIRST;
-  private static final int CLEAR_ID = Menu.FIRST + 1;
+  private static final String TAG = HistoryActivity.class.getSimpleName();
 
   private HistoryManager historyManager;
   private HistoryItemAdapter adapter;
@@ -56,6 +58,10 @@ public final class HistoryActivity extends ListActivity {
   @Override
   protected void onResume() {
     super.onResume();
+    reloadHistoryItems();
+  }
+
+  private void reloadHistoryItems() {
     List<HistoryItem> items = historyManager.buildHistoryItems();
     adapter.clear();
     for (HistoryItem item : items) {
@@ -81,32 +87,32 @@ public final class HistoryActivity extends ListActivity {
                                   View v,
                                   ContextMenu.ContextMenuInfo menuInfo) {
     int position = ((AdapterView.AdapterContextMenuInfo) menuInfo).position;
-    menu.add(Menu.NONE, position, position, R.string.history_clear_one_history_text);
+    if (position >= adapter.getCount() || adapter.getItem(position).getResult() != null) {
+      menu.add(Menu.NONE, position, position, R.string.history_clear_one_history_text);
+    } // else it's just that dummy "Empty" message
   }
 
   @Override
   public boolean onContextItemSelected(MenuItem item) {
     int position = item.getItemId();
     historyManager.deleteHistoryItem(position);
-    finish();
+    reloadHistoryItems();
     return true;
   }
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    super.onCreateOptionsMenu(menu);
     if (historyManager.hasHistoryItems()) {
-      menu.add(0, SEND_ID, 0, R.string.history_send).setIcon(android.R.drawable.ic_menu_share);
-      menu.add(0, CLEAR_ID, 0, R.string.history_clear_text).setIcon(android.R.drawable.ic_menu_delete);
-      return true;
+      MenuInflater menuInflater = getMenuInflater();
+      menuInflater.inflate(R.menu.history, menu);
     }
-    return false;
+    return super.onCreateOptionsMenu(menu);
   }
 
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
     switch (item.getItemId()) {
-      case SEND_ID:
+      case R.id.menu_history_send:
         CharSequence history = historyManager.buildHistory();
         Uri historyFile = HistoryManager.saveHistory(history.toString());
         if (historyFile == null) {
@@ -122,10 +128,14 @@ public final class HistoryActivity extends ListActivity {
           intent.putExtra(Intent.EXTRA_TEXT, subject);
           intent.putExtra(Intent.EXTRA_STREAM, historyFile);
           intent.setType("text/csv");
-          startActivity(intent);
+          try {
+            startActivity(intent);
+          } catch (ActivityNotFoundException anfe) {
+            Log.w(TAG, anfe.toString());
+          }
         }
         break;
-      case CLEAR_ID:
+      case R.id.menu_history_clear_text:
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.msg_sure);
         builder.setCancelable(true);

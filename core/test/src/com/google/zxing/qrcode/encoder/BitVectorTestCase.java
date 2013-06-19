@@ -24,7 +24,7 @@ import org.junit.Test;
  * @author satorux@google.com (Satoru Takabayashi) - creator
  * @author dswitkin@google.com (Daniel Switkin) - ported from C++
  */
-public class BitVectorTestCase extends Assert {
+public final class BitVectorTestCase extends Assert {
 
   private static long getUnsignedInt(BitArray v, int index) {
     long result = 0L;
@@ -84,24 +84,18 @@ public class BitVectorTestCase extends Assert {
 
   @Test
   public void testAppendBits() {
-    {
-      BitArray v = new BitArray();
-      v.appendBits(0x1, 1);
-      assertEquals(1, v.getSize());
-      assertEquals(0x80000000L, getUnsignedInt(v, 0));
-    }
-    {
-      BitArray v = new BitArray();
-      v.appendBits(0xff, 8);
-      assertEquals(8, v.getSize());
-      assertEquals(0xff000000L, getUnsignedInt(v, 0));
-    }
-    {
-      BitArray v = new BitArray();
-      v.appendBits(0xff7, 12);
-      assertEquals(12, v.getSize());
-      assertEquals(0xff700000L, getUnsignedInt(v, 0));
-    }
+    BitArray v = new BitArray();
+    v.appendBits(0x1, 1);
+    assertEquals(1, v.getSize());
+    assertEquals(0x80000000L, getUnsignedInt(v, 0));
+    v = new BitArray();
+    v.appendBits(0xff, 8);
+    assertEquals(8, v.getSize());
+    assertEquals(0xff000000L, getUnsignedInt(v, 0));
+    v = new BitArray();
+    v.appendBits(0xff7, 12);
+    assertEquals(12, v.getSize());
+    assertEquals(0xff700000L, getUnsignedInt(v, 0));
   }
 
   @Test

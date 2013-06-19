@@ -102,16 +102,35 @@ public abstract class LuminanceSource {
   }
 
   /**
-   * Returns a new object with rotated image data. Only callable if isRotateSupported() is true.
+   * @return a wrapper of this {@code LuminanceSource} which inverts the luminances it returns -- black becomes
+   *  white and vice versa, and each value becomes (255-value).
+   */
+  public LuminanceSource invert() {
+    return new InvertedLuminanceSource(this);
+  }
+
+  /**
+   * Returns a new object with rotated image data by 90 degrees counterclockwise.
+   * Only callable if {@link #isRotateSupported()} is true.
    *
    * @return A rotated version of this object.
    */
   public LuminanceSource rotateCounterClockwise() {
-    throw new UnsupportedOperationException("This luminance source does not support rotation.");
+    throw new UnsupportedOperationException("This luminance source does not support rotation by 90 degrees.");
+  }
+
+  /**
+   * Returns a new object with rotated image data by 45 degrees counterclockwise.
+   * Only callable if {@link #isRotateSupported()} is true.
+   *
+   * @return A rotated version of this object.
+   */
+  public LuminanceSource rotateCounterClockwise45() {
+    throw new UnsupportedOperationException("This luminance source does not support rotation by 45 degrees.");
   }
 
   @Override
-  public String toString() {
+  public final String toString() {
     byte[] row = new byte[width];
     StringBuilder result = new StringBuilder(height * (width + 1));
     for (int y = 0; y < height; y++) {

@@ -30,11 +30,11 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.common.AbstractBlackBoxTestCase;
 
-public class RSSExpandedBlackBox2TestCase extends AbstractBlackBoxTestCase {
+public final class RSSExpandedBlackBox2TestCase extends AbstractBlackBoxTestCase {
 
   public RSSExpandedBlackBox2TestCase() {
     super("test/data/blackbox/rssexpanded-2", new MultiFormatReader(), BarcodeFormat.RSS_EXPANDED);
     addTest(21, 23, 0.0f);
-    addTest(19, 23, 180.0f);
+    addTest(21, 23, 180.0f);
   }
 }

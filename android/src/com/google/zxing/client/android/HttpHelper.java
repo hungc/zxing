@@ -16,10 +16,11 @@
 
 package com.google.zxing.client.android;
 
-import java.io.ByteArrayOutputStream;
+import android.util.Log;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,6 +36,8 @@ import java.util.HashSet;
  */
 public final class HttpHelper {
 
+  private static final String TAG = HttpHelper.class.getSimpleName();
+
   private static final Collection<String> REDIRECTOR_DOMAINS = new HashSet<String>(Arrays.asList(
     "amzn.to", "bit.ly", "bitly.com", "fb.me", "goo.gl", "is.gd", "j.mp", "lnkd.in", "ow.ly",
     "R.BEETAGG.COM", "r.beetagg.com", "SCN.BY", "su.pr", "t.co", "tinyurl.com", "tr.im"
@@ -48,17 +51,29 @@ public final class HttpHelper {
     HTML,
     /** JSON content */
     JSON,
+    /** XML */
+    XML,
     /** Plain text content */
     TEXT,
   }
 
   /**
+   * Downloads the entire resource instead of part.
+   *
+   * @see #downloadViaHttp(String, HttpHelper.ContentType, int)
+   */
+  public static CharSequence downloadViaHttp(String uri, ContentType type) throws IOException {
+    return downloadViaHttp(uri, type, Integer.MAX_VALUE);
+  }
+
+  /**
    * @param uri URI to retrieve
    * @param type expected text-like MIME type of that content
+   * @param maxChars approximate maximum characters to read from the source
    * @return content as a {@code String}
    * @throws IOException if the content can't be retrieved because of a bad URI, network problem, etc.
    */
-  public static String downloadViaHttp(String uri, ContentType type) throws IOException {
+  public static CharSequence downloadViaHttp(String uri, ContentType type, int maxChars) throws IOException {
     String contentTypes;
     switch (type) {
       case HTML:
@@ -67,28 +82,46 @@ public final class HttpHelper {
       case JSON:
         contentTypes = "application/json,text/*,*/*";
         break;
+      case XML:
+        contentTypes = "application/xml,text/*,*/*";
+        break;
       case TEXT:
       default:
         contentTypes = "text/*,*/*";
     }
-    return downloadViaHttp(uri, contentTypes);
+    return downloadViaHttp(uri, contentTypes, maxChars);
   }
 
-  private static String downloadViaHttp(String uri, String contentTypes) throws IOException {
-    URL url = new URL(uri);
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    connection.setRequestProperty("Accept", contentTypes);
-    connection.setRequestProperty("Accept-Charset", "utf-8,*");
-    connection.setRequestProperty("User-Agent", "ZXing (Android)");
-    try {
-      connection.connect();
-      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Bad HTTP response: " + connection.getResponseCode());
+  private static CharSequence downloadViaHttp(String uri, String contentTypes, int maxChars) throws IOException {
+    int redirects = 0;
+    while (redirects < 5) {
+      URL url = new URL(uri);
+      HttpURLConnection connection = safelyOpenConnection(url);
+      connection.setInstanceFollowRedirects(true); // Won't work HTTP -> HTTPS or vice versa
+      connection.setRequestProperty("Accept", contentTypes);
+      connection.setRequestProperty("Accept-Charset", "utf-8,*");
+      connection.setRequestProperty("User-Agent", "ZXing (Android)");
+      try {
+        int responseCode = safelyConnect(uri, connection);
+        switch (responseCode) {
+          case HttpURLConnection.HTTP_OK:
+            return consume(connection, maxChars);
+          case HttpURLConnection.HTTP_MOVED_TEMP:
+            String location = connection.getHeaderField("Location");
+            if (location != null) {
+              uri = location;
+              redirects++;
+              continue;
+            }
+            throw new IOException("No Location");
+          default:
+            throw new IOException("Bad HTTP response: " + responseCode);
+        }
+      } finally {
+        connection.disconnect();
       }
-      return consume(connection);
-    } finally {
-      connection.disconnect();
     }
+    throw new IOException("Too many redirects");
   }
 
   private static String getEncoding(URLConnection connection) {
@@ -102,34 +135,29 @@ public final class HttpHelper {
     return "UTF-8";
   }
 
-  private static String consume(URLConnection connection) throws IOException {
+  private static CharSequence consume(URLConnection connection, int maxChars) throws IOException {
     String encoding = getEncoding(connection);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    InputStream in = connection.getInputStream();
+    StringBuilder out = new StringBuilder();
+    Reader in = null;
     try {
-      in = connection.getInputStream();
-      byte[] buffer = new byte[1024];
-      int bytesRead;
-      while ((bytesRead = in.read(buffer)) > 0) {
-        out.write(buffer, 0, bytesRead);
+      in = new InputStreamReader(connection.getInputStream(), encoding);
+      char[] buffer = new char[1024];
+      int charsRead;
+      while (out.length() < maxChars && (charsRead = in.read(buffer)) > 0) {
+        out.append(buffer, 0, charsRead);
       }
     } finally {
-      try {
-        in.close();
-      } catch (IOException ioe) {
-        // continue
+      if (in != null) {
+        try {
+          in.close();
+        } catch (IOException ioe) {
+          // continue
+        } catch (NullPointerException npe) {
+          // another apparent Android / Harmony bug; continue
+        }
       }
     }
-    try {
-      return new String(out.toByteArray(), encoding);
-    } catch (UnsupportedEncodingException uee) {
-      try {
-        return new String(out.toByteArray(), "UTF-8");
-      } catch (UnsupportedEncodingException uee2) {
-        // can't happen
-        throw new IllegalStateException(uee2);
-      }
-    }
+    return out;
   }
 
   public static URI unredirect(URI uri) throws IOException {
@@ -137,15 +165,14 @@ public final class HttpHelper {
       return uri;
     }
     URL url = uri.toURL();
-
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    HttpURLConnection connection = safelyOpenConnection(url);
     connection.setInstanceFollowRedirects(false);
     connection.setDoInput(false);
     connection.setRequestMethod("HEAD");
     connection.setRequestProperty("User-Agent", "ZXing (Android)");
     try {
-      connection.connect();
-      switch (connection.getResponseCode()) {
+      int responseCode = safelyConnect(uri.toString(), connection);
+      switch (responseCode) {
         case HttpURLConnection.HTTP_MULT_CHOICE:
         case HttpURLConnection.HTTP_MOVED_PERM:
         case HttpURLConnection.HTTP_MOVED_TEMP:
@@ -163,6 +190,54 @@ public final class HttpHelper {
       return uri;
     } finally {
       connection.disconnect();
+    }
+  }
+  
+  private static HttpURLConnection safelyOpenConnection(URL url) throws IOException {
+    URLConnection conn;
+    try {
+      conn = url.openConnection();
+    } catch (NullPointerException npe) {
+      // Another strange bug in Android?
+      Log.w(TAG, "Bad URI? " + url);
+      throw new IOException(npe.toString());
+    }
+    if (!(conn instanceof HttpURLConnection)) {
+      throw new IOException();
+    }
+    return (HttpURLConnection) conn;
+  }
+
+  private static int safelyConnect(String uri, HttpURLConnection connection) throws IOException {
+    try {
+      connection.connect();
+    } catch (NullPointerException npe) {
+      // this is an Android bug: http://code.google.com/p/android/issues/detail?id=16895
+      Log.w(TAG, "Bad URI? " + uri);
+      throw new IOException(npe.toString());
+    } catch (IllegalArgumentException iae) {
+      // Also seen this in the wild, not sure what to make of it. Probably a bad URL
+      Log.w(TAG, "Bad URI? " + uri);
+      throw new IOException(iae.toString());
+    } catch (SecurityException se) {
+      // due to bad VPN settings?
+      Log.w(TAG, "Restricted URI? " + uri);
+      throw new IOException(se.toString());
+    } catch (IndexOutOfBoundsException ioobe) {
+      // Another Android problem? https://groups.google.com/forum/?fromgroups#!topic/google-admob-ads-sdk/U-WfmYa9or0
+      Log.w(TAG, "Bad URI? " + uri);
+      throw new IOException(ioobe.toString());
+    }
+    try {
+      return connection.getResponseCode();
+    } catch (NullPointerException npe) {
+      // this is maybe this Android bug: http://code.google.com/p/android/issues/detail?id=15554
+      Log.w(TAG, "Bad URI? " + uri);
+      throw new IOException(npe.toString());
+    } catch (IllegalArgumentException iae) {
+      // Again seen this in the wild for bad header fields in the server response! or bad reads
+      Log.w(TAG, "Bad server status? " + uri);
+      throw new IOException(iae.toString());
     }
   }
 

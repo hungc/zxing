@@ -19,7 +19,13 @@ package com.google.zxing.client.result;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Result;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+import java.util.TimeZone;
 
 /**
  * Tests {@link CalendarParsedResult}.
@@ -29,6 +35,17 @@ import org.junit.Test;
 public final class CalendarParsedResultTestCase extends Assert {
 
   private static final double EPSILON = 0.0000000001;
+
+  private static final DateFormat DATE_TIME_FORMAT = new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'", Locale.ENGLISH);
+  static {
+    DATE_TIME_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
+  }
+
+  @Before
+  public void setUp() {
+    Locale.setDefault(Locale.ENGLISH);
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+  }
 
   @Test
   public void testStartEnd() {
@@ -57,6 +74,22 @@ public final class CalendarParsedResultTestCase extends Assert {
         "DTSTART:20080504T123456Z\r\n" +
         "END:VEVENT\r\nEND:VCALENDAR",
         null, null, null, "20080504T123456Z", null);
+  }
+
+  @Test
+  public void testDuration() {
+    doTest(
+        "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n" +
+        "DTSTART:20080504T123456Z\r\n" +
+        "DURATION:P1D\r\n" +
+        "END:VEVENT\r\nEND:VCALENDAR",
+        null, null, null, "20080504T123456Z", "20080505T123456Z");
+    doTest(
+        "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n" +
+        "DTSTART:20080504T123456Z\r\n" +
+        "DURATION:P1DT2H3M4S\r\n" +
+        "END:VEVENT\r\nEND:VCALENDAR",
+        null, null, null, "20080504T123456Z", "20080505T143800Z");
   }
 
   @Test
@@ -102,7 +135,29 @@ public final class CalendarParsedResultTestCase extends Assert {
         "DTSTART:20080504T123456Z\r\n" +
         "GEO:-12.345;-45.678\r\n" +
         "END:VEVENT\r\nEND:VCALENDAR",
-        null, null, null, "20080504T123456Z", null, null, -12.345, -45.678);
+        null, null, null, "20080504T123456Z", null, null, null, -12.345, -45.678);
+  }
+
+  @Test
+  public void testOrganizer() {
+    doTest(
+        "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n" +
+        "DTSTART:20080504T123456Z\r\n" +
+        "ORGANIZER:mailto:bob@example.org\r\n" +
+        "END:VEVENT\r\nEND:VCALENDAR",
+        null, null, null, "20080504T123456Z", null, "bob@example.org", null, Double.NaN, Double.NaN);
+  }
+
+  @Test
+  public void testAttendees() {
+    doTest(
+        "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n" +
+        "DTSTART:20080504T123456Z\r\n" +
+        "ATTENDEE:mailto:bob@example.org\r\n" +
+        "ATTENDEE:mailto:alice@example.org\r\n" +
+        "END:VEVENT\r\nEND:VCALENDAR",
+        null, null, null, "20080504T123456Z", null, null,
+        new String[] {"bob@example.org", "alice@example.org"}, Double.NaN, Double.NaN);
   }
 
   @Test
@@ -125,8 +180,8 @@ public final class CalendarParsedResultTestCase extends Assert {
            "Meeting with a friend\nlook at homepage first\n\n\n  \n",
            "Summary line",
            "Location, with, escaped, commas",
-           "20111110T110000",
-           "20111110T120000");
+           "20111110T110000Z",
+           "20111110T120000Z");
   }
 
   @Test
@@ -135,25 +190,26 @@ public final class CalendarParsedResultTestCase extends Assert {
            "DTSTART;VALUE=DATE:20111110\n" +
            "DTEND;VALUE=DATE:20111110\n" +
            "END:VEVENT",
-           null, null, null, "20111110", "20111110");
+           null, null, null, "20111110T000000Z", "20111110T000000Z");
   }
 
   private static void doTest(String contents,
                              String description,
                              String summary,
                              String location,
-                             String start,
-                             String end) {
-    doTest(contents, description, summary, location, start, end, null, Double.NaN, Double.NaN);
+                             String startString,
+                             String endString) {
+    doTest(contents, description, summary, location, startString, endString, null, null, Double.NaN, Double.NaN);
   }
 
   private static void doTest(String contents,
                              String description,
                              String summary,
                              String location,
-                             String start,
-                             String end,
-                             String attendee,
+                             String startString,
+                             String endString,
+                             String organizer,
+                             String[] attendees,
                              double latitude,
                              double longitude) {
     Result fakeResult = new Result(contents, null, null, BarcodeFormat.QR_CODE);
@@ -163,9 +219,10 @@ public final class CalendarParsedResultTestCase extends Assert {
     assertEquals(description, calResult.getDescription());
     assertEquals(summary, calResult.getSummary());
     assertEquals(location, calResult.getLocation());
-    assertEquals(start, calResult.getStart());
-    assertEquals(end, calResult.getEnd());
-    assertEquals(attendee, calResult.getAttendee());
+    assertEquals(startString, DATE_TIME_FORMAT.format(calResult.getStart()));
+    assertEquals(endString, calResult.getEnd() == null ? null : DATE_TIME_FORMAT.format(calResult.getEnd()));
+    assertEquals(organizer, calResult.getOrganizer());
+    assertArrayEquals(attendees, calResult.getAttendees());
     assertEqualOrNaN(latitude, calResult.getLatitude());
     assertEqualOrNaN(longitude, calResult.getLongitude());
   }

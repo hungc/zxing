@@ -58,6 +58,7 @@ void ReedSolomonTest::setUp() {
 }
 
 void ReedSolomonTest::tearDown() {
+  delete qrRSDecoder_;
 }
 
 void ReedSolomonTest::testNoError() {
@@ -69,7 +70,7 @@ void ReedSolomonTest::testNoError() {
 void ReedSolomonTest::testOneError() {
   ArrayRef<int> received(new Array<int>(qrCodeTestWithEc_->size()));
   srandom(0xDEADBEEFL);
-  for (unsigned i = 0; i < received->size(); i++) {
+  for (int i = 0; i < received->size(); i++) {
     *received = *qrCodeTestWithEc_;
     received[i] = random() % 256;
     checkQRRSDecode(received);
@@ -79,7 +80,7 @@ void ReedSolomonTest::testOneError() {
 void ReedSolomonTest::testMaxErrors() {
   ArrayRef<int> received(new Array<int>(qrCodeTestWithEc_->size()));
   srandom(0xDEADBEEFL);
-  for (unsigned i = 0; i < qrCodeTest_->size(); i++) {
+  for (int i = 0; i < qrCodeTest_->size(); i++) {
     *received = *qrCodeTestWithEc_;
     corrupt(received, qrCodeCorrectable_);
     checkQRRSDecode(received);
@@ -95,7 +96,7 @@ void ReedSolomonTest::testTooManyErrors() {
     checkQRRSDecode(received);
     cout << "expected exception!\n";
     CPPUNIT_FAIL("should not happen!");
-  } catch (ReedSolomonException e) {
+  } catch (ReedSolomonException const& e) {
     // expected
   } catch (...) {
     CPPUNIT_FAIL("unexpected exception!");
@@ -106,7 +107,7 @@ void ReedSolomonTest::testTooManyErrors() {
 void ReedSolomonTest::checkQRRSDecode(ArrayRef<int> &received) {
   int twoS = 2 * qrCodeCorrectable_;
   qrRSDecoder_->decode(received, twoS);
-  for (unsigned i = 0; i < qrCodeTest_->size(); i++) {
+  for (int i = 0; i < qrCodeTest_->size(); i++) {
     CPPUNIT_ASSERT_EQUAL(qrCodeTest_[i], received[i]);
   }
 }

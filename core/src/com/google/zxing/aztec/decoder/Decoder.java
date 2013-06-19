@@ -168,7 +168,6 @@ public final class Decoder {
       } else {
         if (table == Table.BINARY) {
           if (endIndex - startIndex < 8) {
-            end = true;
             break;
           }
           code = readCode(correctedBits, startIndex, 8);
@@ -184,7 +183,6 @@ public final class Decoder {
           }
 
           if (endIndex - startIndex < size) {
-            end = true;
             break;
           }
 
@@ -318,7 +316,7 @@ public final class Decoder {
     try {
       ReedSolomonDecoder rsDecoder = new ReedSolomonDecoder(gf);
       rsDecoder.decode(dataWords, numECCodewords);
-    } catch (ReedSolomonException rse) {
+    } catch (ReedSolomonException ignored) {
       throw FormatException.getFormatInstance();
     }
 

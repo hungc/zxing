@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
@@ -47,12 +48,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * @author Sean Owen
  * @author dswitkin@google.com (Daniel Switkin)
  */
 public abstract class AbstractBlackBoxTestCase extends Assert {
+
+  private static final Logger log = Logger.getLogger(AbstractBlackBoxTestCase.class.getSimpleName());
 
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final Charset ISO88591 = Charset.forName("ISO-8859-1");
@@ -83,9 +87,11 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     this.barcodeReader = barcodeReader;
     this.expectedFormat = expectedFormat;
     testResults = new ArrayList<TestResult>();
+
+    System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%6$s%n");
   }
 
-  protected void addTest(int mustPassCount, int tryHarderCount, float rotation) {
+  protected final void addTest(int mustPassCount, int tryHarderCount, float rotation) {
     addTest(mustPassCount, tryHarderCount, 0, 0, rotation);
   }
 
@@ -99,20 +105,20 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
    *                             reading the wrong contents using the try harder flag
    * @param rotation The rotation in degrees clockwise to use for this test.
    */
-  protected void addTest(int mustPassCount,
-                         int tryHarderCount,
-                         int maxMisreads,
-                         int maxTryHarderMisreads,
-                         float rotation) {
+  protected final void addTest(int mustPassCount,
+                               int tryHarderCount,
+                               int maxMisreads,
+                               int maxTryHarderMisreads,
+                               float rotation) {
     testResults.add(new TestResult(mustPassCount, tryHarderCount, maxMisreads, maxTryHarderMisreads, rotation));
   }
 
-  protected File[] getImageFiles() {
+  protected final File[] getImageFiles() {
     assertTrue("Please run from the 'core' directory", testBase.exists());
     return testBase.listFiles(IMAGE_NAME_FILTER);
   }
 
-  protected Reader getReader() {
+  protected final Reader getReader() {
     return barcodeReader;
   }
 
@@ -123,7 +129,7 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     testBlackBoxCountingResults(true);
   }
 
-  public SummaryResults testBlackBoxCountingResults(boolean assertOnFailure) throws IOException {
+  public final SummaryResults testBlackBoxCountingResults(boolean assertOnFailure) throws IOException {
     assertFalse(testResults.isEmpty());
 
     File[] imageFiles = getImageFiles();
@@ -135,7 +141,7 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     int[] tryHaderMisreadCounts = new int[testCount];
 
     for (File testImage : imageFiles) {
-      System.out.printf("Starting %s\n", testImage.getAbsolutePath());
+      log.info(String.format("Starting %s", testImage.getAbsolutePath()));
 
       BufferedImage image = ImageIO.read(testImage);
 
@@ -173,8 +179,8 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
           } else {
             misreadCounts[x]++;
           }
-        } catch (ReaderException re) {
-          // continue
+        } catch (ReaderException ignored) {
+          log.fine(String.format("could not read at rotation %f", rotation));
         }
         try {
           if (decode(bitmap, rotation, expectedText, expectedMetadata, true)) {
@@ -182,8 +188,8 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
           } else {
             tryHaderMisreadCounts[x]++;
           }
-        } catch (ReaderException re) {
-          // continue
+        } catch (ReaderException ignored) {
+          log.fine(String.format("could not read at rotation %f w/TH", rotation));
         }
       }
     }
@@ -196,17 +202,17 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
 
     for (int x = 0; x < testResults.size(); x++) {
       TestResult testResult = testResults.get(x);
-      System.out.printf("Rotation %d degrees:\n", (int) testResult.getRotation());
-      System.out.printf("  %d of %d images passed (%d required)\n",
-                        passedCounts[x], imageFiles.length, testResult.getMustPassCount());
+      log.info(String.format("Rotation %d degrees:", (int) testResult.getRotation()));
+      log.info(String.format(" %d of %d images passed (%d required)",
+                             passedCounts[x], imageFiles.length, testResult.getMustPassCount()));
       int failed = imageFiles.length - passedCounts[x];
-      System.out.printf("    %d failed due to misreads, %d not detected\n",
-                        misreadCounts[x], failed - misreadCounts[x]);
-      System.out.printf("  %d of %d images passed with try harder (%d required)\n",
-                        tryHarderCounts[x], imageFiles.length, testResult.getTryHarderCount());
+      log.info(String.format(" %d failed due to misreads, %d not detected",
+                             misreadCounts[x], failed - misreadCounts[x]));
+      log.info(String.format(" %d of %d images passed with try harder (%d required)",
+                             tryHarderCounts[x], imageFiles.length, testResult.getTryHarderCount()));
       failed = imageFiles.length - tryHarderCounts[x];
-      System.out.printf("    %d failed due to misreads, %d not detected\n",
-                        tryHaderMisreadCounts[x], failed - tryHaderMisreadCounts[x]);
+      log.info(String.format(" %d failed due to misreads, %d not detected",
+                             tryHaderMisreadCounts[x], failed - tryHaderMisreadCounts[x]));
       totalFound += passedCounts[x] + tryHarderCounts[x];
       totalMustPass += testResult.getMustPassCount() + testResult.getTryHarderCount();
       totalMisread += misreadCounts[x] + tryHaderMisreadCounts[x];
@@ -214,21 +220,19 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     }
 
     int totalTests = imageFiles.length * testCount * 2;
-    System.out.printf("TOTALS:\nDecoded %d images out of %d (%d%%, %d required)\n",
-                      totalFound, totalTests, totalFound * 100 / totalTests, totalMustPass);
+    log.info(String.format("Decoded %d images out of %d (%d%%, %d required)",
+                           totalFound, totalTests, totalFound * 100 / totalTests, totalMustPass));
     if (totalFound > totalMustPass) {
-      System.out.printf("  +++ Test too lax by %d images\n", totalFound - totalMustPass);
+      log.warning(String.format("+++ Test too lax by %d images", totalFound - totalMustPass));
     } else if (totalFound < totalMustPass) {
-      System.out.printf("  --- Test failed by %d images\n", totalMustPass - totalFound);
+      log.warning(String.format("--- Test failed by %d images", totalMustPass - totalFound));
     }
 
     if (totalMisread < totalMaxMisread) {
-      System.out.printf("  +++ Test expects too many misreads by %d images\n", totalMaxMisread - totalMisread);
+      log.warning(String.format("+++ Test expects too many misreads by %d images", totalMaxMisread - totalMisread));
     } else if (totalMisread > totalMaxMisread) {
-      System.out.printf("  --- Test had too many misreads by %d images\n", totalMisread - totalMaxMisread);
+      log.warning(String.format("--- Test had too many misreads by %d images", totalMisread - totalMaxMisread));
     }
-
-    System.out.flush();
 
     // Then run through again and assert if any failed
     if (assertOnFailure) {
@@ -265,15 +269,15 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     Result result = barcodeReader.decode(source, hints);
 
     if (expectedFormat != result.getBarcodeFormat()) {
-      System.out.printf("Format mismatch: expected '%s' but got '%s'%s\n",
-                        expectedFormat, result.getBarcodeFormat(), suffix);
+      log.info(String.format("Format mismatch: expected '%s' but got '%s'%s",
+                             expectedFormat, result.getBarcodeFormat(), suffix));
       return false;
     }
 
     String resultText = result.getText();
     if (!expectedText.equals(resultText)) {
-      System.out.printf("Content mismatch: expected '%s' but got '%s'%s\n", 
-                        expectedText, resultText, suffix);
+      log.info(String.format("Content mismatch: expected '%s' but got '%s'%s",
+                             expectedText, resultText, suffix));
       return false;
     }
 
@@ -283,8 +287,8 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
       Object expectedValue = metadatum.getValue();
       Object actualValue = resultMetadata == null ? null : resultMetadata.get(key);
       if (!expectedValue.equals(actualValue)) {
-        System.out.printf("Metadata mismatch for key '%s': expected '%s' but got '%s'\n",
-                          key, expectedValue, actualValue);
+        log.info(String.format("Metadata mismatch for key '%s': expected '%s' but got '%s'",
+                               key, expectedValue, actualValue));
         return false;
       }
     }
@@ -292,7 +296,7 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     return true;
   }
 
-  private static String readFileAsString(File file, Charset charset) throws IOException {
+  protected static String readFileAsString(File file, Charset charset) throws IOException {
     StringBuilder result = new StringBuilder((int) file.length());
     InputStreamReader reader = new InputStreamReader(new FileInputStream(file), charset);
     try {
@@ -304,13 +308,35 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
     } finally {
       reader.close();
     }
-    return result.toString();
+    String stringContents = result.toString();
+    if (stringContents.endsWith("\n")) {
+      log.warning("String contents of file " + file + " end with a newline. " +
+                  "This may not be intended and cause a test failure");
+    }
+    return stringContents;
   }
 
   protected static BufferedImage rotateImage(BufferedImage original, float degrees) {
     if (degrees == 0.0f) {
       return original;
     }
+
+    switch(original.getType()) {
+    case BufferedImage.TYPE_BYTE_INDEXED:
+    case BufferedImage.TYPE_BYTE_BINARY:
+      BufferedImage argb = new BufferedImage(original.getWidth(),
+                                             original.getHeight(),
+                                             BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = argb.createGraphics();
+      g.drawImage(original, 0, 0, null);
+      g.dispose();
+      original = argb;
+      break;
+    default:
+      // nothing
+      break;
+    }
+
     double radians = Math.toRadians(degrees);
 
     // Transform simply to find out the new bounding box (don't actually run the image through it)
@@ -330,7 +356,7 @@ public abstract class AbstractBlackBoxTestCase extends Assert {
                  (height - original.getHeight()) / 2.0);
     op = new AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC);
 
-    return op.filter(original, null);
+    return op.filter(original, new BufferedImage(width, height, original.getType()));
   }
 
 }

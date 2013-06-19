@@ -31,7 +31,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 
-import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
@@ -87,12 +86,9 @@ public final class GUIRunner extends JFrame {
   private static String getDecodeText(File file) {
     BufferedImage image;
     try {
-      image = ImageIO.read(file);
+      image = ImageReader.readImage(file);
     } catch (IOException ioe) {
       return ioe.toString();
-    }
-    if (image == null) {
-      return "Could not decode image";
     }
     LuminanceSource source = new BufferedImageLuminanceSource(image);
     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));

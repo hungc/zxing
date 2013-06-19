@@ -42,6 +42,8 @@ public final class VCardResultParser extends ResultParser {
   private static final Pattern EQUALS = Pattern.compile("=");
   private static final Pattern SEMICOLON = Pattern.compile(";");
   private static final Pattern UNESCAPED_SEMICOLONS = Pattern.compile("(?<!\\\\);+");
+  private static final Pattern COMMA = Pattern.compile(",");
+  private static final Pattern SEMICOLON_OR_COMMA = Pattern.compile("[;,]");
 
   @Override
   public AddressBookParsedResult parse(Result result) {
@@ -59,6 +61,8 @@ public final class VCardResultParser extends ResultParser {
       names = matchVCardPrefixedField("N", rawText, true, false);
       formatNames(names);
     }
+    List<String> nicknameString = matchSingleVCardPrefixedField("NICKNAME", rawText, true, false);
+    String[] nicknames = nicknameString == null ? null : COMMA.split(nicknameString.get(0));
     List<List<String>> phoneNumbers = matchVCardPrefixedField("TEL", rawText, true, false);
     List<List<String>> emails = matchVCardPrefixedField("EMAIL", rawText, true, false);
     List<String> note = matchSingleVCardPrefixedField("NOTE", rawText, false, false);
@@ -69,9 +73,15 @@ public final class VCardResultParser extends ResultParser {
       birthday = null;
     }
     List<String> title = matchSingleVCardPrefixedField("TITLE", rawText, true, false);
-    List<String> url = matchSingleVCardPrefixedField("URL", rawText, true, false);
+    List<List<String>> urls = matchVCardPrefixedField("URL", rawText, true, false);
     List<String> instantMessenger = matchSingleVCardPrefixedField("IMPP", rawText, true, false);
-    return new AddressBookParsedResult(toPrimaryValues(names), 
+    List<String> geoString = matchSingleVCardPrefixedField("GEO", rawText, true, false);
+    String[] geo = geoString == null ? null : SEMICOLON_OR_COMMA.split(geoString.get(0));
+    if (geo != null && geo.length != 2) {
+      geo = null;
+    }
+    return new AddressBookParsedResult(toPrimaryValues(names),
+                                       nicknames,
                                        null, 
                                        toPrimaryValues(phoneNumbers), 
                                        toTypes(phoneNumbers),
@@ -84,13 +94,14 @@ public final class VCardResultParser extends ResultParser {
                                        toPrimaryValue(org),
                                        toPrimaryValue(birthday),
                                        toPrimaryValue(title),
-                                       toPrimaryValue(url));
+                                       toPrimaryValues(urls),
+                                       geo);
   }
 
-  private static List<List<String>> matchVCardPrefixedField(CharSequence prefix,
-                                                            String rawText,
-                                                            boolean trim,
-                                                            boolean parseFieldDivider) {
+  static List<List<String>> matchVCardPrefixedField(CharSequence prefix,
+                                                    String rawText,
+                                                    boolean trim,
+                                                    boolean parseFieldDivider) {
     List<List<String>> matches = null;
     int i = 0;
     int max = rawText.length();
@@ -140,8 +151,8 @@ public final class VCardResultParser extends ResultParser {
              rawText.charAt(i+1) == '\t')) {
           i += 2; // Skip \n and continutation whitespace
         } else if (quotedPrintable &&             // If preceded by = in quoted printable
-                   (rawText.charAt(i-1) == '=' || // this is a continuation
-                    rawText.charAt(i-2) == '=')) {
+                   ((i >= 1 && rawText.charAt(i-1) == '=') || // this is a continuation
+                    (i >= 2 && rawText.charAt(i-2) == '='))) {
           i++; // Skip \n
         } else {
           break;
@@ -156,7 +167,7 @@ public final class VCardResultParser extends ResultParser {
         if (matches == null) {
           matches = new ArrayList<List<String>>(1); // lazy init
         }
-        if (rawText.charAt(i-1) == '\r') {
+        if (i >= 1 && rawText.charAt(i-1) == '\r') {
           i--; // Back up over \r, which really should be there
         }
         String element = rawText.substring(matchStart, i);
@@ -266,7 +277,10 @@ public final class VCardResultParser extends ResultParser {
     }
     List<String> result = new ArrayList<String>(lists.size());
     for (List<String> list : lists) {
-      result.add(list.get(0));
+      String value = list.get(0);
+      if (value != null && value.length() > 0) {
+        result.add(value);
+      }
     }
     return result.toArray(new String[lists.size()]);
   }
@@ -314,7 +328,7 @@ public final class VCardResultParser extends ResultParser {
         int start = 0;
         int end;
         int componentIndex = 0;
-        while ((end = name.indexOf(';', start)) > 0) {
+        while (componentIndex < components.length - 1 && (end = name.indexOf(';', start)) > 0) {
           components[componentIndex] = name.substring(start, end);
           componentIndex++;
           start = end + 1;

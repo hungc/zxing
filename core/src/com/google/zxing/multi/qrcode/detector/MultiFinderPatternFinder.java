@@ -76,7 +76,7 @@ final class MultiFinderPatternFinder extends FinderPatternFinder {
   /**
    * A comparator that orders FinderPatterns by their estimated module size.
    */
-  private static class ModuleSizeComparator implements Comparator<FinderPattern>, Serializable {
+  private static final class ModuleSizeComparator implements Comparator<FinderPattern>, Serializable {
     @Override
     public int compare(FinderPattern center1, FinderPattern center2) {
       float value = center2.getEstimatedModuleSize() - center1.getEstimatedModuleSize();
@@ -264,14 +264,7 @@ final class MultiFinderPatternFinder extends FinderPatternFinder {
         } else { // White pixel
           if ((currentState & 1) == 0) { // Counting black pixels
             if (currentState == 4) { // A winner?
-              if (foundPatternCross(stateCount)) { // Yes
-                boolean confirmed = handlePossibleCenter(stateCount, i, j);
-                if (!confirmed) {
-                  do { // Advance to next black pixel
-                    j++;
-                  } while (j < maxJ && !image.get(j, i));
-                  j--; // back up to that last white pixel
-                }
+              if (foundPatternCross(stateCount) && handlePossibleCenter(stateCount, i, j)) { // Yes
                 // Clear state to start looking again
                 currentState = 0;
                 stateCount[0] = 0;

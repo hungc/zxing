@@ -71,9 +71,13 @@ public final class RSS14Reader extends AbstractRSSReader {
     Pair rightPair = decodePair(row, true, rowNumber, hints);
     addOrTally(possibleRightPairs, rightPair);
     row.reverse();
-    for (Pair left : possibleLeftPairs) {
+    int lefSize = possibleLeftPairs.size();
+    for (int i = 0; i < lefSize; i++) {
+      Pair left = possibleLeftPairs.get(i);
       if (left.getCount() > 1) {
-        for (Pair right : possibleRightPairs) {
+        int rightSize = possibleRightPairs.size();
+        for (int j = 0; j < rightSize; j++) {
+          Pair right = possibleRightPairs.get(j);
           if (right.getCount() > 1) {
             if (checkChecksum(left, right)) {
               return constructResult(left, right);
@@ -139,11 +143,11 @@ public final class RSS14Reader extends AbstractRSSReader {
   }
 
   private static boolean checkChecksum(Pair leftPair, Pair rightPair) {
-    int leftFPValue = leftPair.getFinderPattern().getValue();
-    int rightFPValue = rightPair.getFinderPattern().getValue();
-    if ((leftFPValue == 0 && rightFPValue == 8) ||
-        (leftFPValue == 8 && rightFPValue == 0)) {
-    }
+    //int leftFPValue = leftPair.getFinderPattern().getValue();
+    //int rightFPValue = rightPair.getFinderPattern().getValue();
+    //if ((leftFPValue == 0 && rightFPValue == 8) ||
+    //    (leftFPValue == 8 && rightFPValue == 0)) {
+    //}
     int checkValue = (leftPair.getChecksumPortion() + 16 * rightPair.getChecksumPortion()) % 79;
     int targetCheckValue =
         9 * leftPair.getFinderPattern().getValue() + rightPair.getFinderPattern().getValue();
@@ -178,7 +182,7 @@ public final class RSS14Reader extends AbstractRSSReader {
       return new Pair(1597 * outside.getValue() + inside.getValue(),
                       outside.getChecksumPortion() + 4 * inside.getChecksumPortion(),
                       pattern);
-    } catch (NotFoundException re) {
+    } catch (NotFoundException ignored) {
       return null;
     }
   }
@@ -352,23 +356,6 @@ public final class RSS14Reader extends AbstractRSSReader {
     }
     return new FinderPattern(value, new int[] {firstElementStart, startEnd[1]}, start, end, rowNumber);
   }
-
-  /*
-  private static int[] normalizeE2SEValues(int[] counters) {
-    int p = 0;
-    for (int i = 0; i < counters.length; i++) {
-      p += counters[i];
-    }
-    int[] normalized = new int[counters.length - 2];
-    for (int i = 0; i < normalized.length; i++) {
-      int e = counters[i] + counters[i+1];
-      float eRatio = (float) e / (float) p;
-      float E = ((eRatio * 32.0f) + 1.0f) / 2.0f;
-      normalized[i] = (int) E;
-    }
-    return normalized;
-  }
-   */
 
   private void adjustOddEvenCounts(boolean outsideChar, int numModules) throws NotFoundException {
 

@@ -8,7 +8,7 @@
 //
 
 #import "ZXMainViewController.h"
-#import <QRCodeReader.h>
+#import <MultiFormatReader.h>
 #import <UniversalResultParser.h>
 #import <ParsedResult.h>
 #import <ResultAction.h>
@@ -52,7 +52,7 @@
 
 - (IBAction)scan:(id)sender {
   ZXingWidgetController *widController = [[ZXingWidgetController alloc] initWithDelegate:self showCancel:YES OneDMode:NO];
-  QRCodeReader* qrcodeReader = [[QRCodeReader alloc] init];
+  MultiFormatReader* qrcodeReader = [[MultiFormatReader alloc] init];
   NSSet *readers = [[NSSet alloc ] initWithObjects:qrcodeReader,nil];
   [qrcodeReader release];
   widController.readers = readers;
@@ -109,14 +109,32 @@
 #pragma mark ZXingDelegateMethods
 - (void)zxingController:(ZXingWidgetController*)controller didScanResult:(NSString *)resultString {
   [self dismissModalViewControllerAnimated:YES];
-#ifdef DEBUG  
+#if ZXING_DEBUG
   NSLog(@"result has %d actions", actions ? 0 : actions.count);
 #endif
   Scan * scan = [[Database sharedDatabase] addScanWithText:resultString];
   [[NSUserDefaults standardUserDefaults] setObject:resultString forKey:@"lastScan"];
   NSString *returnUrl = [[NSUserDefaults standardUserDefaults] stringForKey:@"returnURL"];
+
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"returnURL"];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"scanFormats"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+
   if (returnUrl != nil) {
-    NSURL *ourURL = [NSURL URLWithString:[returnUrl stringByReplacingOccurrencesOfString:@"{CODE}" withString:resultString]];
+    resultString = (NSString*)
+        CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                (CFStringRef)resultString,
+                                                NULL,
+                                                (CFStringRef)@"!*'();:@&=+$,/?%#[]",
+                                                kCFStringEncodingUTF8);
+
+    NSURL *ourURL =
+        [NSURL URLWithString:[returnUrl stringByReplacingOccurrencesOfString:@"{CODE}" withString:resultString]];
+
+    CFRelease(resultString);
+
+    // NSLog(@"%@", ourURL);
+
     [[UIApplication sharedApplication] openURL:ourURL];
     return;
   }
@@ -130,8 +148,35 @@
   [self performResultAction];
 }
 
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  NSString* returnUrl = [[NSUserDefaults standardUserDefaults] stringForKey:@"returnURL"];
+
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"returnURL"];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"scanFormats"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+
+  // NSLog(@"%@ %d", returnUrl, buttonIndex);
+  if (returnUrl != nil && buttonIndex != 0) {
+    NSURL *ourURL =
+        [NSURL URLWithString:[returnUrl stringByReplacingOccurrencesOfString:@"{CODE}" withString:@""]];
+    // NSLog(@"%@ %@", ourURL, returnUrl);
+    [[UIApplication sharedApplication] openURL:ourURL];
+  }
+}
+
 - (void)zxingControllerDidCancel:(ZXingWidgetController*)controller {
   [self dismissModalViewControllerAnimated:YES];
+  NSString *returnUrl = [[NSUserDefaults standardUserDefaults] stringForKey:@"returnURL"];
+  if (returnUrl != nil) {
+    UIAlertView* alert = [[UIAlertView alloc]
+                           initWithTitle:@"Return to website?"
+                                 message:nil
+                                delegate:self
+                           cancelButtonTitle:@"Cancel"
+                           otherButtonTitles:@"Return", nil];
+    [alert show];
+    [alert release];
+  }
 }
 
 - (void)confirmAndPerformAction:(ResultAction *)action {
@@ -145,13 +190,15 @@
   }
   
   if (self.actions == nil || self.actions.count == 0) {
+#if ZXING_DEBUG
     NSLog(@"result has no actions to perform!");
+#endif
     return;
   }
   
   if (self.actions.count == 1) {
     ResultAction *action = [self.actions lastObject];
-#ifdef DEBUG
+#if ZXING_DEBUG
     NSLog(@"Result has the single action, (%@)  '%@', performing it",
           NSStringFromClass([action class]), [action title]);
 #endif
@@ -159,7 +206,7 @@
                withObject:action
                afterDelay:0.0];
   } else {
-#ifdef DEBUG
+#if ZXING_DEBUG
     NSLog(@"Result has multiple actions, popping up an action sheet");
 #endif
     UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithFrame:self.view.bounds];

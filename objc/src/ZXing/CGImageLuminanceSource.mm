@@ -16,16 +16,22 @@
  */
 
 #import <ZXing/ZXCGImageLuminanceSource.h>
+#include <sstream>
 #include <zxing/common/IllegalArgumentException.h>
 
-namespace zxing {
+using std::string;
+using std::ostringstream;
+using zxing::CGImageLuminanceSource;
+using zxing::ArrayRef;
+using zxing::Ref;
+using zxing::LuminanceSource;
 
 CGImageRef CGImageLuminanceSource::createImageFromBuffer
   (CVPixelBufferRef buffer, int left, int top, int width, int height)
 {
-  int bytesPerRow = CVPixelBufferGetBytesPerRow(buffer); 
-  int dataWidth = CVPixelBufferGetWidth(buffer); 
-  int dataHeight = CVPixelBufferGetHeight(buffer); 
+  int bytesPerRow = (int)CVPixelBufferGetBytesPerRow(buffer); 
+  int dataWidth = (int)CVPixelBufferGetWidth(buffer); 
+  int dataHeight = (int)CVPixelBufferGetHeight(buffer); 
     
   if (left + width > dataWidth ||
       top + height > dataHeight || 
@@ -50,7 +56,7 @@ CGImageRef CGImageLuminanceSource::createImageFromBuffer
     for(int y=0; y<height; y++) {
       memcpy(bytes+y*newBytesPerRow,
              baseAddress+left*4+(top+y)*bytesPerRow,
-             bytesPerRow);
+             newBytesPerRow);
     }
   }
   CVPixelBufferUnlockBaseAddress(buffer, 0);
@@ -82,56 +88,56 @@ CGImageRef CGImageLuminanceSource::createImageFromBuffer
     (buffer,
      0,
      0,
-     CVPixelBufferGetWidth(buffer),
-     CVPixelBufferGetHeight(buffer));
+     (int)CVPixelBufferGetWidth(buffer),
+     (int)CVPixelBufferGetHeight(buffer));
 }
 
-CGImageLuminanceSource::CGImageLuminanceSource(CVPixelBufferRef buffer) 
-{
+CGImageLuminanceSource* CGImageLuminanceSource::create(CVPixelBufferRef buffer) {
+  // Will leak if there's an exception ...
   CGImageRef image = createImageFromBuffer(buffer);
-  init(image);
+  CGImageLuminanceSource* source = new CGImageLuminanceSource(image);
   CGImageRelease(image);
+  return source;
 }
 
-CGImageLuminanceSource::CGImageLuminanceSource
-  (CVPixelBufferRef buffer, int left, int top, int width, int height) 
-{
+CGImageLuminanceSource::CGImageLuminanceSource(CVPixelBufferRef buffer,
+                                               int left, int top, int width, int height)
+: Super(width, height) { 
   CGImageRef image = createImageFromBuffer(buffer, left, top, width, height);
   init(image);
   CGImageRelease(image);
 }
 
-CGImageLuminanceSource::CGImageLuminanceSource(CGImageRef cgimage) 
-{
+CGImageLuminanceSource::CGImageLuminanceSource(CGImageRef cgimage)
+: Super((int)CGImageGetWidth(cgimage), (int)CGImageGetHeight(cgimage)) {
   init(cgimage);
 }
 
-CGImageLuminanceSource::CGImageLuminanceSource
-  (CGImageRef cgimage, int left, int top, int width, int height) 
-{
-  init(cgimage, left, top, width, height);
+CGImageLuminanceSource::CGImageLuminanceSource(CGImageRef cgimage,
+                                               int left,
+                                               int top,
+                                               int width,
+                                               int height)
+: Super(width, height) {
+  init(cgimage, left, top);
 }
 
 void
-CGImageLuminanceSource::init(CGImageRef cgimage)
-{
-  init(cgimage, 0, 0, CGImageGetWidth(cgimage), CGImageGetHeight(cgimage));
+CGImageLuminanceSource::init(CGImageRef cgimage) {
+  init(cgimage, 0, 0);
 }
 
 void
-CGImageLuminanceSource::init
-  (CGImageRef cgimage, int left, int top, int width, int height) {
+CGImageLuminanceSource::init(CGImageRef cgimage, int left, int top) {
   data_ = 0;
   image_ = cgimage;
   left_ = left;
   top_ = top;
-  width_ = width;
-  height_ = height;
-  dataWidth_ = CGImageGetWidth(image_);
-  dataHeight_ = CGImageGetHeight(image_);
+  dataWidth_ = (int)CGImageGetWidth(image_);
+  dataHeight_ = (int)CGImageGetHeight(image_);
 
-  if (left_ + width_ > dataWidth_ ||
-      top_ + height_ > dataHeight_ ||
+  if (left_ + getWidth() > dataWidth_ ||
+      top_ + getHeight() > dataHeight_ ||
       top_ < 0 ||
       left_ < 0) {
     throw IllegalArgumentException
@@ -148,28 +154,28 @@ CGImageLuminanceSource::init
     CGColorSpaceRef gray = CGColorSpaceCreateDeviceGray();
 
     CGContextRef ctx = CGBitmapContextCreate(0,
-                                             width,
-                                             height, 
+                                             getWidth(),
+                                             getHeight(), 
                                              8,
-                                             width,
+                                             getWidth(),
                                              gray, 
                                              kCGImageAlphaNone);
 
     CGColorSpaceRelease(gray);
 
     if (top || left) {
-      CGContextClipToRect(ctx, CGRectMake(0, 0, width, height));
+      CGContextClipToRect(ctx, CGRectMake(0, 0, getWidth(), getHeight()));
     }
 
-    CGContextDrawImage(ctx, CGRectMake(-left, -top, width, height), image_);
+    CGContextDrawImage(ctx, CGRectMake(-left, -top, getWidth(), getHeight()), image_);
     
     image_ = CGBitmapContextCreateImage(ctx); 
 
-    bytesPerRow_ = width;
+    bytesPerRow_ = getWidth();
     top_ = 0;
     left_ = 0;
-    dataWidth_ = width;
-    dataHeight_ = height;
+    dataWidth_ = getWidth();
+    dataHeight_ = getHeight();
 
     CGContextRelease(ctx);
   } else {
@@ -189,40 +195,39 @@ CGImageLuminanceSource::~CGImageLuminanceSource() {
   }
 }
 
-unsigned char* CGImageLuminanceSource::getRow(int y, unsigned char* row) {
+ArrayRef<char> CGImageLuminanceSource::getRow(int y, ArrayRef<char> row) const {
   if (y < 0 || y >= this->getHeight()) {
-    throw IllegalArgumentException("Requested row is outside the image: " + y);
+    ostringstream msg;
+    msg << "Requested row is outside the image: " << y;
+    throw IllegalArgumentException(msg.str().c_str());
   }
   int width = getWidth();
   // TODO(flyashi): determine if row has enough size.
-  if (row == NULL) {
-    row = new unsigned char[width_];
+  if (!row) {
+    row = ArrayRef<char>(getWidth());
   }
   int offset = (y + top_) * dataWidth_ + left_;
-  CFDataGetBytes(data_, CFRangeMake(offset, width), row);
+  char* v = &row->values()[0];
+  CFDataGetBytes(data_, CFRangeMake(offset, width), (unsigned char*)v);
   return row;
 }
 
-unsigned char* CGImageLuminanceSource::getMatrix() {
-  int size = width_ * height_;
-  unsigned char* result = new unsigned char[size];
+ArrayRef<char> CGImageLuminanceSource::getMatrix() const {
+  int size = getWidth() * getHeight();
+  ArrayRef<char> result (size);
   if (left_ == 0 &&
       top_ == 0 &&
-      dataWidth_ == width_ &&
-      dataHeight_ == height_) {
-    CFDataGetBytes(data_, CFRangeMake(0, size), result);
+      dataWidth_ == getWidth() &&
+      dataHeight_ == getHeight()) {
+    char* v = &result->values()[0];
+    CFDataGetBytes(data_, CFRangeMake(0, size), (unsigned char*)v);
   } else {
-    for (int row = 0; row < height_; row++) {
+    for (int row = 0; row < getHeight(); row++) {
+      char* v = &result->values()[0];
       CFDataGetBytes(data_,
-                     CFRangeMake((top_ + row) * dataWidth_ + left_, width_),
-                     result + row * width_);
+                     CFRangeMake((top_ + row) * dataWidth_ + left_, getWidth()),
+                     (unsigned char*)v + row * getWidth());
     }
   }
   return result;
-}
-
-Ref<LuminanceSource> CGImageLuminanceSource::rotateCounterClockwise() {
-  return Ref<LuminanceSource>(0);
-}
-
 }

@@ -71,7 +71,7 @@
 }
 
 - (void)populateActions { 
-#ifdef DEBUG
+#if ZXING_DEBUG
   NSLog(@"creating action to open URL '%@'", self.urlString);
 #endif
   

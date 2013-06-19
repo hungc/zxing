@@ -18,46 +18,51 @@ package com.google.zxing.client.android.share;
 
 import android.app.ListActivity;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.provider.Browser;
 import android.view.View;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecInterface;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecManager;
 
 public final class AppPickerActivity extends ListActivity {
 
-  private final List<String[]> labelsPackages = new ArrayList<String[]>();
   private LoadPackagesAsyncTask backgroundTask;
+  private final AsyncTaskExecInterface taskExec;
+
+  public AppPickerActivity() {
+    taskExec = new AsyncTaskExecManager().build();
+  }
 
   @Override
   protected void onResume() {
     super.onResume();
-    labelsPackages.clear();
     backgroundTask = new LoadPackagesAsyncTask(this);
-    backgroundTask.execute(labelsPackages);
+    taskExec.execute(backgroundTask);
   }
 
   @Override
   protected void onPause() {
-    if (backgroundTask.getStatus() != AsyncTask.Status.FINISHED) {
-      backgroundTask.cancel(true);
+    LoadPackagesAsyncTask task = backgroundTask;
+    if (task != null) {
+      task.cancel(true);
+      backgroundTask = null;
     }
-    backgroundTask = null;
     super.onPause();
   }
 
   @Override
   protected void onListItemClick(ListView l, View view, int position, long id) {
-    if (position >= 0 && position < labelsPackages.size()) {
-      String url = "market://details?id=" + labelsPackages.get(position)[1];
+    ListAdapter adapter = getListAdapter();    
+    if (position >= 0 && position < adapter.getCount()) {
+      String packageName = ((AppInfo) adapter.getItem(position)).getPackageName();
       Intent intent = new Intent();
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-      intent.putExtra(Browser.BookmarkColumns.URL, url);
+      intent.putExtra(Browser.BookmarkColumns.URL, "market://details?id=" + packageName);
       setResult(RESULT_OK, intent);
     } else {
-      setResult(RESULT_CANCELED);
+      setResult(RESULT_CANCELED);      
     }
     finish();
   }

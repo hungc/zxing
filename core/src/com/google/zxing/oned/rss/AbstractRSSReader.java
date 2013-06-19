@@ -22,7 +22,7 @@ import com.google.zxing.oned.OneDReader;
 public abstract class AbstractRSSReader extends OneDReader {
 
   private static final int MAX_AVG_VARIANCE = (int) (PATTERN_MATCH_RESULT_SCALE_FACTOR * 0.2f);
-  private static final int MAX_INDIVIDUAL_VARIANCE = (int) (PATTERN_MATCH_RESULT_SCALE_FACTOR * 0.4f);
+  private static final int MAX_INDIVIDUAL_VARIANCE = (int) (PATTERN_MATCH_RESULT_SCALE_FACTOR * 0.45f);
 
   private static final float MIN_FINDER_PATTERN_RATIO = 9.5f / 12.0f;
   private static final float MAX_FINDER_PATTERN_RATIO = 12.5f / 14.0f;
@@ -43,27 +43,27 @@ public abstract class AbstractRSSReader extends OneDReader {
     evenCounts = new int[dataCharacterCounters.length / 2];
   }
 
-  protected int[] getDecodeFinderCounters() {
+  protected final int[] getDecodeFinderCounters() {
     return decodeFinderCounters;
   }
 
-  protected int[] getDataCharacterCounters() {
+  protected final int[] getDataCharacterCounters() {
     return dataCharacterCounters;
   }
 
-  protected float[] getOddRoundingErrors() {
+  protected final float[] getOddRoundingErrors() {
     return oddRoundingErrors;
   }
 
-  protected float[] getEvenRoundingErrors() {
+  protected final float[] getEvenRoundingErrors() {
     return evenRoundingErrors;
   }
 
-  protected int[] getOddCounts() {
+  protected final int[] getOddCounts() {
     return oddCounts;
   }
 
-  protected int[] getEvenCounts() {
+  protected final int[] getEvenCounts() {
     return evenCounts;
   }
 

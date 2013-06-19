@@ -38,6 +38,7 @@ import android.os.Bundle;
 import android.telephony.PhoneNumberUtils;
 import android.util.Log;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -130,18 +131,32 @@ final class QRCodeEncoder {
   // Handles send intents from multitude of Android applications
   private void encodeContentsFromShareIntent(Intent intent) throws WriterException {
     // Check if this is a plain text encoding, or contact
-    if (intent.hasExtra(Intent.EXTRA_TEXT)) {
-      encodeContentsFromShareIntentPlainText(intent);
+    if (intent.hasExtra(Intent.EXTRA_STREAM)) {
+      encodeFromStreamExtra(intent);
     } else {
-      // Attempt default sharing.
-      encodeContentsFromShareIntentDefault(intent);
+      encodeFromTextExtras(intent);
     }
   }
 
-  private void encodeContentsFromShareIntentPlainText(Intent intent) throws WriterException {
+  private void encodeFromTextExtras(Intent intent) throws WriterException {
     // Notice: Google Maps shares both URL and details in one text, bummer!
     String theContents = ContactEncoder.trim(intent.getStringExtra(Intent.EXTRA_TEXT));
-    // We only support non-empty and non-blank texts.
+    if (theContents == null) {
+      theContents = ContactEncoder.trim(intent.getStringExtra("android.intent.extra.HTML_TEXT"));
+      // Intent.EXTRA_HTML_TEXT
+      if (theContents == null) {
+        theContents = ContactEncoder.trim(intent.getStringExtra(Intent.EXTRA_SUBJECT));
+        if (theContents == null) {
+          String[] emails = intent.getStringArrayExtra(Intent.EXTRA_EMAIL);
+          if (emails != null) {
+            theContents = ContactEncoder.trim(emails[0]);
+          } else {
+            theContents = "?";
+          }
+        }
+      }
+    }
+
     // Trim text to avoid URL breaking.
     if (theContents == null || theContents.length() == 0) {
       throw new WriterException("Empty EXTRA_TEXT");
@@ -160,13 +175,13 @@ final class QRCodeEncoder {
   }
 
   // Handles send intents from the Contacts app, retrieving a contact as a VCARD.
-  private void encodeContentsFromShareIntentDefault(Intent intent) throws WriterException {
+  private void encodeFromStreamExtra(Intent intent) throws WriterException {
     format = BarcodeFormat.QR_CODE;
     Bundle bundle = intent.getExtras();
     if (bundle == null) {
       throw new WriterException("No extras");
     }
-    Uri uri = (Uri) bundle.getParcelable(Intent.EXTRA_STREAM);
+    Uri uri = bundle.getParcelable(Intent.EXTRA_STREAM);
     if (uri == null) {
       throw new WriterException("No EXTRA_STREAM");
     }
@@ -174,16 +189,14 @@ final class QRCodeEncoder {
     String vcardString;
     try {
       InputStream stream = activity.getContentResolver().openInputStream(uri);
-      int length = stream.available();
-      if (length <= 0) {
-        throw new WriterException("Content stream is empty");
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      byte[] buffer = new byte[2048];
+      int bytesRead;
+      while ((bytesRead = stream.read(buffer)) > 0) {
+        baos.write(buffer, 0, bytesRead);
       }
-      vcard = new byte[length];
-      int bytesRead = stream.read(vcard, 0, length);
-      if (bytesRead < length) {
-        throw new WriterException("Unable to fully read available bytes from content stream");
-      }
-      vcardString = new String(vcard, 0, bytesRead, "UTF-8");
+      vcard = baos.toByteArray();
+      vcardString = new String(vcard, 0, vcard.length, "UTF-8");
     } catch (IOException ioe) {
       throw new WriterException(ioe);
     }
@@ -246,6 +259,7 @@ final class QRCodeEncoder {
           emails.add(bundle.getString(Contents.EMAIL_KEYS[x]));
         }
         String url = bundle.getString(Contents.URL_KEY);
+        Collection<String> urls = url == null ? null : Collections.singletonList(url);
         String note = bundle.getString(Contents.NOTE_KEY);
 
         ContactEncoder mecardEncoder = useVCard ? new VCardContactEncoder() : new MECARDContactEncoder();
@@ -254,7 +268,7 @@ final class QRCodeEncoder {
                                                 Collections.singleton(address),
                                                 phones,
                                                 emails,
-                                                url,
+                                                urls,
                                                 note);
         // Make sure we've encoded at least one field.
         if (encoded[1].length() > 0) {
@@ -287,7 +301,7 @@ final class QRCodeEncoder {
                                       toIterable(contact.getAddresses()),
                                       toIterable(contact.getPhoneNumbers()),
                                       toIterable(contact.getEmails()),
-                                      contact.getURL(),
+                                      toIterable(contact.getURLs()),
                                       null);
     // Make sure we've encoded at least one field.
     if (encoded[1].length() > 0) {
@@ -312,8 +326,13 @@ final class QRCodeEncoder {
       hints = new EnumMap<EncodeHintType,Object>(EncodeHintType.class);
       hints.put(EncodeHintType.CHARACTER_SET, encoding);
     }
-    MultiFormatWriter writer = new MultiFormatWriter();
-    BitMatrix result = writer.encode(contentsToEncode, format, dimension, dimension, hints);
+    BitMatrix result;
+    try {
+      result = new MultiFormatWriter().encode(contentsToEncode, format, dimension, dimension, hints);
+    } catch (IllegalArgumentException iae) {
+      // Unsupported format
+      return null;
+    }
     int width = result.getWidth();
     int height = result.getHeight();
     int[] pixels = new int[width * height];

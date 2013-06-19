@@ -17,6 +17,7 @@
 package com.google.zxing;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileFilter;
@@ -48,11 +49,13 @@ import java.util.regex.Pattern;
  * who should be forced to retranslate.
  * Usage: {@code StringsResourceTranslator android/res/ [key_1 ...]}</p>
  *
+ * <p>You must set your Google Translate API key into the environment with -DtranslateAPI.key=...</p>
+ *
  * @author Sean Owen
  */
 public final class StringsResourceTranslator {
 
-  private static final String API_KEY = "INSERT-YOUR-KEY";
+  private static final String API_KEY = System.getProperty("translateAPI.key");
   
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final Pattern ENTRY_PATTERN = Pattern.compile("<string name=\"([^\"]+)\".*>([^<]+)</string>");
@@ -62,7 +65,7 @@ public final class StringsResourceTranslator {
 
   private static final String APACHE_2_LICENSE =
       "<!--\n" +
-      " Copyright (C) 2011 ZXing authors\n" +
+      " Copyright (C) 2013 ZXing authors\n" +
       '\n' +
       " Licensed under the Apache License, Version 2.0 (the \"License\");\n" +
       " you may not use this file except in compliance with the License.\n" +
@@ -124,11 +127,12 @@ public final class StringsResourceTranslator {
     System.out.println("Translating " + language);
 
     File resultTempFile = File.createTempFile(parentName, ".xml");
+    resultTempFile.deleteOnExit();
 
     boolean anyChange = false;
     Writer out = null;
     try {
-      out = new OutputStreamWriter(new FileOutputStream(resultTempFile), UTF8);
+      out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(resultTempFile), UTF8));
       out.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
       out.write(APACHE_2_LICENSE);
       out.write("<resources>\n");
@@ -166,6 +170,8 @@ public final class StringsResourceTranslator {
       System.out.println("  Writing translations");
       translatedFile.delete();
       resultTempFile.renameTo(translatedFile);
+    } else {
+      resultTempFile.delete();
     }
   }
 
@@ -178,6 +184,10 @@ public final class StringsResourceTranslator {
       language = massagedLanguage;
     }
     System.out.println("  Need translation for " + english);
+
+    if (API_KEY == null) {
+      throw new IllegalArgumentException("translateAPI.key is not specified");
+    }
 
     URL translateURL = new URL(
         "https://www.googleapis.com/language/translate/v2?key=" + API_KEY + "&q=" +
@@ -208,7 +218,7 @@ public final class StringsResourceTranslator {
     StringBuilder translateResult = new StringBuilder(200);
     Reader in = null;
     try {
-      in = new InputStreamReader(connection.getInputStream(), UTF8);
+      in = new BufferedReader(new InputStreamReader(connection.getInputStream(), UTF8));
       char[] buffer = new char[1024];
       int charsRead;
       while ((charsRead = in.read(buffer)) > 0) {
@@ -221,7 +231,10 @@ public final class StringsResourceTranslator {
   }
 
   private static SortedMap<String,String> readLines(File file) throws IOException {
-    SortedMap<String,String> entries = new TreeMap<String,String>();
+    SortedMap<String,String> entries = new TreeMap<String,String>();    
+    if (!file.exists()) {
+      return entries;
+    }
     BufferedReader reader = null;
     try {
       reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), UTF8));

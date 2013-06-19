@@ -69,16 +69,16 @@ static NSMutableArray *sTheResultParsers = nil;
 
 + (ParsedResult *)parsedResultForString:(NSString *)s
                                  format:(BarcodeFormat)format {
-#ifdef DEBUG
+#if ZXING_DEBUG
   NSLog(@"parsing result:\n<<<\n%@\n>>>\n", s);
 #endif
   for (Class c in sTheResultParsers) {
-#ifdef DEBUG
+#if ZXING_DEBUG
     NSLog(@"trying %@", NSStringFromClass(c));
 #endif
     ParsedResult *result = [c parsedResultForString:s format:format];
     if (result != nil) {
-#ifdef DEBUG
+#if ZXING_DEBUG
       NSLog(@"parsed as %@ %@", NSStringFromClass([result class]), result);
 #endif
       return result;
@@ -88,7 +88,7 @@ static NSMutableArray *sTheResultParsers = nil;
 }
 
 + (ParsedResult *)parsedResultForString:(NSString *)theString {
-  return [self parsedResultForString:theString format:BarcodeFormat_None];
+  return [self parsedResultForString:theString format:BarcodeFormat_NONE];
 }
 
 @end

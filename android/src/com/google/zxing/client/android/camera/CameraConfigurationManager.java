@@ -27,7 +27,10 @@ import android.view.WindowManager;
 
 import com.google.zxing.client.android.PreferencesActivity;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -37,8 +40,12 @@ import java.util.List;
 final class CameraConfigurationManager {
 
   private static final String TAG = "CameraConfiguration";
-  private static final int MIN_PREVIEW_PIXELS = 320 * 240; // small screen
-  private static final int MAX_PREVIEW_PIXELS = 854 * 480; // large/HD screen (Droid 2 in particular)
+
+  // This is bigger than the size of a small screen, which is still supported. The routine
+  // below will still select the default (presumably 320x240) size for these. This prevents
+  // accidental selection of very low resolution on some devices.
+  private static final int MIN_PREVIEW_PIXELS = 470 * 320; // normal screen
+  private static final int MAX_PREVIEW_PIXELS = 1280 * 800;
 
   private final Context context;
   private Point screenResolution;
@@ -71,7 +78,7 @@ final class CameraConfigurationManager {
     Log.i(TAG, "Camera resolution: " + cameraResolution);
   }
 
-  void setDesiredCameraParameters(Camera camera) {
+  void setDesiredCameraParameters(Camera camera, boolean safeMode) {
     Camera.Parameters parameters = camera.getParameters();
 
     if (parameters == null) {
@@ -79,14 +86,44 @@ final class CameraConfigurationManager {
       return;
     }
 
+    Log.i(TAG, "Initial camera parameters: " + parameters.flatten());
+
+    if (safeMode) {
+      Log.w(TAG, "In camera config safe mode -- most settings will not be honored");
+    }
+
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-    initializeTorch(parameters, prefs);
-    String focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                         Camera.Parameters.FOCUS_MODE_AUTO,
-                                         Camera.Parameters.FOCUS_MODE_MACRO);
+    initializeTorch(parameters, prefs, safeMode);
+
+    String focusMode = null;
+    if (prefs.getBoolean(PreferencesActivity.KEY_AUTO_FOCUS, true)) {
+      if (safeMode || prefs.getBoolean(PreferencesActivity.KEY_DISABLE_CONTINUOUS_FOCUS, false)) {
+        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                                      Camera.Parameters.FOCUS_MODE_AUTO);
+      } else {
+        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                                      "continuous-picture", // Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE in 4.0+
+                                      "continuous-video",   // Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO in 4.0+
+                                      Camera.Parameters.FOCUS_MODE_AUTO);
+      }
+    }
+    // Maybe selected auto-focus but not available, so fall through here:
+    if (!safeMode && focusMode == null) {
+      focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                                    Camera.Parameters.FOCUS_MODE_MACRO,
+                                    "edof"); // Camera.Parameters.FOCUS_MODE_EDOF in 2.2+
+    }
     if (focusMode != null) {
       parameters.setFocusMode(focusMode);
+    }
+
+    if (prefs.getBoolean(PreferencesActivity.KEY_INVERT_SCAN, false)) {
+      String colorMode = findSettableValue(parameters.getSupportedColorEffects(),
+                                           Camera.Parameters.EFFECT_NEGATIVE);
+      if (colorMode != null) {
+        parameters.setColorEffect(colorMode);
+      }
     }
 
     parameters.setPreviewSize(cameraResolution.x, cameraResolution.y);
@@ -101,25 +138,31 @@ final class CameraConfigurationManager {
     return screenResolution;
   }
 
+  boolean getTorchState(Camera camera) {
+    if (camera != null) {
+      Camera.Parameters parameters = camera.getParameters();
+      if (parameters != null) {
+        String flashMode = camera.getParameters().getFlashMode();
+        return flashMode != null &&
+            (Camera.Parameters.FLASH_MODE_ON.equals(flashMode) ||
+             Camera.Parameters.FLASH_MODE_TORCH.equals(flashMode));
+      }
+    }
+    return false;
+  }
+
   void setTorch(Camera camera, boolean newSetting) {
     Camera.Parameters parameters = camera.getParameters();
-    doSetTorch(parameters, newSetting);
+    doSetTorch(parameters, newSetting, false);
     camera.setParameters(parameters);
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    boolean currentSetting = prefs.getBoolean(PreferencesActivity.KEY_FRONT_LIGHT, false);
-    if (currentSetting != newSetting) {
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean(PreferencesActivity.KEY_FRONT_LIGHT, newSetting);
-      editor.commit();
-    }
   }
 
-  private static void initializeTorch(Camera.Parameters parameters, SharedPreferences prefs) {
-    boolean currentSetting = prefs.getBoolean(PreferencesActivity.KEY_FRONT_LIGHT, false);
-    doSetTorch(parameters, currentSetting);
+  private void initializeTorch(Camera.Parameters parameters, SharedPreferences prefs, boolean safeMode) {
+    boolean currentSetting = FrontLightMode.readPref(prefs) == FrontLightMode.ON;
+    doSetTorch(parameters, currentSetting, safeMode);
   }
 
-  private static void doSetTorch(Camera.Parameters parameters, boolean newSetting) {
+  private void doSetTorch(Camera.Parameters parameters, boolean newSetting, boolean safeMode) {
     String flashMode;
     if (newSetting) {
       flashMode = findSettableValue(parameters.getSupportedFlashModes(),
@@ -132,11 +175,43 @@ final class CameraConfigurationManager {
     if (flashMode != null) {
       parameters.setFlashMode(flashMode);
     }
+
+    /*
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+    if (!prefs.getBoolean(PreferencesActivity.KEY_DISABLE_EXPOSURE, false)) {
+      if (!safeMode) {
+        ExposureInterface exposure = new ExposureManager().build();
+        exposure.setExposure(parameters, newSetting);
+      }
+    }
+     */
   }
 
   private Point findBestPreviewSizeValue(Camera.Parameters parameters, Point screenResolution) {
 
-    List<Camera.Size> supportedPreviewSizes = parameters.getSupportedPreviewSizes();
+    List<Camera.Size> rawSupportedSizes = parameters.getSupportedPreviewSizes();
+    if (rawSupportedSizes == null) {
+      Log.w(TAG, "Device returned no supported preview sizes; using default");
+      Camera.Size defaultSize = parameters.getPreviewSize();
+      return new Point(defaultSize.width, defaultSize.height);
+    }
+
+    // Sort by size, descending
+    List<Camera.Size> supportedPreviewSizes = new ArrayList<Camera.Size>(rawSupportedSizes);
+    Collections.sort(supportedPreviewSizes, new Comparator<Camera.Size>() {
+      @Override
+      public int compare(Camera.Size a, Camera.Size b) {
+        int aPixels = a.height * a.width;
+        int bPixels = b.height * b.width;
+        if (bPixels < aPixels) {
+          return -1;
+        }
+        if (bPixels > aPixels) {
+          return 1;
+        }
+        return 0;
+      }
+    });
 
     if (Log.isLoggable(TAG, Log.INFO)) {
       StringBuilder previewSizesString = new StringBuilder();
@@ -147,6 +222,10 @@ final class CameraConfigurationManager {
       Log.i(TAG, "Supported preview sizes: " + previewSizesString);
     }
 
+    Point bestSize = null;
+    float screenAspectRatio = (float) screenResolution.x / (float) screenResolution.y;
+
+    float diff = Float.POSITIVE_INFINITY;
     for (Camera.Size supportedPreviewSize : supportedPreviewSizes) {
       int realWidth = supportedPreviewSize.width;
       int realHeight = supportedPreviewSize.height;
@@ -158,27 +237,12 @@ final class CameraConfigurationManager {
       int maybeFlippedWidth = isCandidatePortrait ? realHeight : realWidth;
       int maybeFlippedHeight = isCandidatePortrait ? realWidth : realHeight;
       if (maybeFlippedWidth == screenResolution.x && maybeFlippedHeight == screenResolution.y) {
-        return new Point(realWidth, realHeight);
+        Point exactPoint = new Point(realWidth, realHeight);
+        Log.i(TAG, "Found preview size exactly matching screen size: " + exactPoint);
+        return exactPoint;
       }
-    }
-
-    Point bestSize = null;
-
-    int diff = Integer.MAX_VALUE;
-    for (Camera.Size supportedPreviewSize : supportedPreviewSizes) {
-      int realWidth = supportedPreviewSize.width;
-      int realHeight = supportedPreviewSize.height;
-      int pixels = realWidth * realHeight;
-      if (pixels < MIN_PREVIEW_PIXELS || pixels > MAX_PREVIEW_PIXELS) {
-        continue;
-      }
-      boolean isCandidatePortrait = realWidth < realHeight;
-      int maybeFlippedWidth = isCandidatePortrait ? realHeight : realWidth;
-      int maybeFlippedHeight = isCandidatePortrait ? realWidth : realHeight;
-      int newDiff = Math.abs(screenResolution.x * maybeFlippedHeight - screenResolution.y * maybeFlippedWidth);
-      if (newDiff == 0) {
-        return new Point(realWidth, realHeight);
-      }
+      float aspectRatio = (float) maybeFlippedWidth / (float) maybeFlippedHeight;
+      float newDiff = Math.abs(aspectRatio - screenAspectRatio);
       if (newDiff < diff) {
         bestSize = new Point(realWidth, realHeight);
         diff = newDiff;
@@ -191,6 +255,7 @@ final class CameraConfigurationManager {
       Log.i(TAG, "No suitable preview sizes, using default: " + bestSize);
     }
 
+    Log.i(TAG, "Found best approximate preview size: " + bestSize);
     return bestSize;
   }
 

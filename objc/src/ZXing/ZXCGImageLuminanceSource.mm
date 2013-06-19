@@ -29,8 +29,9 @@
                                        top:(size_t)top
                                      width:(size_t)width
                                     height:(size_t)height {
-  return zxing::CGImageLuminanceSource::createImageFromBuffer
-    (buffer, left, top, width, height);
+  return zxing::CGImageLuminanceSource::createImageFromBuffer(
+    buffer, (int)left, (int)top, (int)width, (int)height
+    );
 }
 
 - (id)initWithZXImage:(ZXImage*)image 
@@ -38,7 +39,9 @@
                   top:(size_t)top
                 width:(size_t)width
                height:(size_t)height {
-  self = [super initWithNative:new zxing::CGImageLuminanceSource(image.cgimage, left, top, width, height)];
+  self = [super initWithNative:new zxing::CGImageLuminanceSource(
+      image.cgimage, (int)left, (int)top, (int)width, (int)height
+      )];
   return self;
 }
 
@@ -52,7 +55,9 @@
                   top:(size_t)top
                 width:(size_t)width
                height:(size_t)height {
-  self = [super initWithNative:new zxing::CGImageLuminanceSource(image, left, top, width, height)];
+  self = [super initWithNative:new zxing::CGImageLuminanceSource(
+      image, (int)left, (int)top, (int)width, (int)height
+      )];
   return self;
 }
 
@@ -66,12 +71,14 @@
                  top:(size_t)top
                width:(size_t)width
               height:(size_t)height {
-  self = [super initWithNative:new zxing::CGImageLuminanceSource(buffer, left, top, width, height)];
+  self = [super initWithNative:new zxing::CGImageLuminanceSource(
+      buffer, (int)left, (int)top, (int)width, (int)height
+      )];
   return self;
 }
 
 - (id)initWithBuffer:(CVPixelBufferRef)buffer {
-  self = [super initWithNative:new zxing::CGImageLuminanceSource(buffer)];
+  self = [super initWithNative:zxing::CGImageLuminanceSource::create(buffer)];
   return self;
 }
 
@@ -80,13 +87,5 @@
   zxing::CGImageLuminanceSource* typed = (zxing::CGImageLuminanceSource*)source;
   return typed->image();
 }
-
-/*
-- (CGImageRef)createImageWithWidth:(size_t)width andHeight:(size_t)height {
-  zxing::LuminanceSource* source = native;
-  zxing::CGImageLuminanceSource* typed = (zxing::CGImageLuminanceSource*)source;
-  return typed->createImage(width, height);
-}
-*/
 
 @end

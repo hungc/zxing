@@ -36,6 +36,7 @@ import javax.imageio.ImageIO;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.BufferedImageLuminanceSource;
 import com.google.zxing.NotFoundException;
+import com.google.zxing.ReaderException;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.common.GlobalHistogramBinarizer;
 import org.junit.Assert;
@@ -50,7 +51,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
   @Test
   public void testDecodeRow2binary_1() throws Exception {
     // (11)100224(17)110224(3102)000100
-    String path = "test/data/blackbox/rssexpanded-1/1.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/1.png";
     String expected = " ...X...X .X....X. .XX...X. X..X...X ...XX.X. ..X.X... ..X.X..X ...X..X. X.X....X .X....X. .....X.. X...X...";
 
     assertCorrectImage2binary(path, expected);
@@ -59,7 +60,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
   @Test
   public void testDecodeRow2binary_2() throws Exception {
     // (01)90012345678908(3103)001750
-    String path = "test/data/blackbox/rssexpanded-1/2.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/2.png";
     String expected = " ..X..... ......X. .XXX.X.X .X...XX. XXXXX.XX XX.X.... .XX.XX.X .XX.";
 
     assertCorrectImage2binary(path, expected);
@@ -69,7 +70,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
   @Test
   public void testDecodeRow2binary_3() throws Exception {
     // (10)12A
-    String path = "test/data/blackbox/rssexpanded-1/3.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/3.png";
     String expected = " .......X ..XX..X. X.X....X .......X ....";
 
     assertCorrectImage2binary(path, expected);
@@ -78,7 +79,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
   @Test
   public void testDecodeRow2binary_4() throws Exception {
     // (01)98898765432106(3202)012345(15)991231
-    String path = "test/data/blackbox/rssexpanded-1/4.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/4.png";
     String expected = " ..XXXX.X XX.XXXX. .XXX.XX. XX..X... .XXXXX.. XX.X..X. ..XX..XX XX.X.XXX X..XX..X .X.XXXXX XXXX";
 
     assertCorrectImage2binary(path, expected);
@@ -87,7 +88,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
   @Test
   public void testDecodeRow2binary_5() throws Exception {
     // (01)90614141000015(3202)000150
-    String path = "test/data/blackbox/rssexpanded-1/5.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/5.png";
     String expected = " ..X.X... .XXXX.X. XX..XXXX ....XX.. X....... ....X... ....X..X .XX.";
 
     assertCorrectImage2binary(path, expected);
@@ -116,7 +117,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)98898765432106(3103)001750
 
     String expected = " ..X..XX. XXXX..XX X.XX.XX. .X....XX XXX..XX. X..X.... .XX.XX.X .XX.";
-    String path = "test/data/blackbox/rssexpanded-1/12.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/12.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -146,7 +147,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3102)001750(11)100312
 
     String expected = " ..XXX... ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/15.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/15.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -156,7 +157,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3202)001750(11)100312
 
     String expected = " ..XXX..X ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/16.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/16.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -166,7 +167,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3102)001750(13)100312
 
     String expected = " ..XXX.X. ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/17.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/17.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -176,7 +177,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3202)001750(13)100312
 
     String expected = " ..XXX.XX ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/18.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/18.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -186,7 +187,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3102)001750(15)100312
 
     String expected = " ..XXXX.. ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/19.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/19.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -196,7 +197,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3202)001750(15)100312
 
     String expected = " ..XXXX.X ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/20.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/20.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -206,7 +207,7 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3102)001750(17)100312
 
     String expected = " ..XXXXX. ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/21.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/21.png";
 
     assertCorrectImage2binary(path, expected);
   }
@@ -216,13 +217,12 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     // (01)90012345678908(3202)001750(17)100312
 
     String expected = " ..XXXXXX ........ .X..XXX. X.X.X... XX.XXXXX .XXXX.X. ..XX...X .X.....X .XX..... XXXX.X.. XX..";
-    String path = "test/data/blackbox/rssexpanded-1/22.jpg";
+    String path = "test/data/blackbox/rssexpanded-1/22.png";
 
     assertCorrectImage2binary(path, expected);
   }
 
   private static void assertCorrectImage2binary(String path, String expected) throws IOException, NotFoundException {
-    RSSExpandedReader rssExpandedReader = new RSSExpandedReader();
 
     File file = new File(path);
     if (!file.exists()) {
@@ -235,7 +235,14 @@ public final class RSSExpandedImage2binaryTestCase extends Assert {
     int rowNumber = binaryMap.getHeight() / 2;
     BitArray row = binaryMap.getBlackRow(rowNumber, null);
 
-    List<ExpandedPair> pairs = rssExpandedReader.decodeRow2pairs(rowNumber, row);
+    List<ExpandedPair> pairs;
+    try {
+      RSSExpandedReader rssExpandedReader = new RSSExpandedReader();
+      pairs = rssExpandedReader.decodeRow2pairs(rowNumber, row);
+    } catch (ReaderException re) {
+      fail(re.toString());
+      return;
+    }
     BitArray binary = BitArrayBuilder.buildBitArray(pairs);
     assertEquals(expected, binary.toString());
   }

@@ -132,15 +132,8 @@ public final class ShareActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-
     ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-    if (clipboard.hasText()) {
-      clipboardButton.setEnabled(true);
-      clipboardButton.setText(R.string.button_share_clipboard);
-    } else {
-      clipboardButton.setEnabled(false);
-      clipboardButton.setText(R.string.button_clipboard_empty);
-    }
+    clipboardButton.setEnabled(clipboard.hasText());
   }
 
   @Override
@@ -184,13 +177,12 @@ public final class ShareActivity extends Activity {
       return; // Show error?
     }
     ContentResolver resolver = getContentResolver();
-    Bundle bundle = new Bundle();
 
     Cursor cursor;
     try {
       // We're seeing about six reports a week of this exception although I don't understand why.
       cursor = resolver.query(contactUri, null, null, null, null);
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException ignored) {
       return;
     }
     if (cursor == null) {
@@ -215,6 +207,7 @@ public final class ShareActivity extends Activity {
     }
 
     // Don't require a name to be present, this contact might be just a phone number.
+    Bundle bundle = new Bundle();
     if (name != null && name.length() > 0) {
       bundle.putString(ContactsContract.Intents.Insert.NAME, massageContactData(name));
     }
@@ -231,7 +224,9 @@ public final class ShareActivity extends Activity {
           int phonesNumberColumn = phonesCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
           while (phonesCursor.moveToNext() && foundPhone < Contents.PHONE_KEYS.length) {
             String number = phonesCursor.getString(phonesNumberColumn);
-            bundle.putString(Contents.PHONE_KEYS[foundPhone], massageContactData(number));
+            if (number != null && number.length() > 0) {
+              bundle.putString(Contents.PHONE_KEYS[foundPhone], massageContactData(number));
+            }
             foundPhone++;
           }
         } finally {
@@ -250,7 +245,9 @@ public final class ShareActivity extends Activity {
         if (methodsCursor.moveToNext()) {
           String data = methodsCursor.getString(
               methodsCursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredPostal.FORMATTED_ADDRESS));
-          bundle.putString(ContactsContract.Intents.Insert.POSTAL, massageContactData(data));
+          if (data != null && data.length() > 0) {
+            bundle.putString(ContactsContract.Intents.Insert.POSTAL, massageContactData(data));
+          }
         }
       } finally {
         methodsCursor.close();
@@ -268,7 +265,9 @@ public final class ShareActivity extends Activity {
         int emailColumn = emailCursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA);
         while (emailCursor.moveToNext() && foundEmail < Contents.EMAIL_KEYS.length) {
           String email = emailCursor.getString(emailColumn);
-          bundle.putString(Contents.EMAIL_KEYS[foundEmail], massageContactData(email));
+          if (email != null && email.length() > 0) {
+            bundle.putString(Contents.EMAIL_KEYS[foundEmail], massageContactData(email));
+          }
           foundEmail++;
         }
       } finally {

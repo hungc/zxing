@@ -178,18 +178,25 @@ public abstract class ResultParser {
     return result;
   }
 
-  private static void appendKeyValue(CharSequence keyValue,
-                                     Map<String,String> result) {
+  private static void appendKeyValue(CharSequence keyValue, Map<String,String> result) {
     String[] keyValueTokens = EQUALS.split(keyValue, 2);
     if (keyValueTokens.length == 2) {
       String key = keyValueTokens[0];
       String value = keyValueTokens[1];
       try {
-        value = URLDecoder.decode(value, "UTF-8");
-      } catch (UnsupportedEncodingException uee) {
-        throw new IllegalStateException(uee); // can't happen
+        value = urlDecode(value);
+        result.put(key, value);
+      } catch (IllegalArgumentException iae) {
+        // continue; invalid data such as an escape like %0t
       }
-      result.put(key, value);
+    }
+  }
+  
+  static String urlDecode(String encoded) {
+    try {
+      return URLDecoder.decode(encoded, "UTF-8");
+    } catch (UnsupportedEncodingException uee) {
+      throw new IllegalStateException(uee); // can't happen
     }
   }
 
@@ -223,7 +230,9 @@ public abstract class ResultParser {
           if (trim) {
             element = element.trim();
           }
-          matches.add(element);
+          if (element.length() > 0) {
+            matches.add(element);
+          }
           i++;
           more = false;
         }

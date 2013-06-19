@@ -24,6 +24,7 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.ContactsContract;
 import android.util.Log;
 import android.view.Menu;
@@ -40,12 +41,14 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 public final class ZXingTestActivity extends Activity {
 
   private static final String TAG = ZXingTestActivity.class.getSimpleName();
   private static final int ABOUT_ID = Menu.FIRST;
   private static final String PACKAGE_NAME = ZXingTestActivity.class.getPackage().getName();
+  private static final Pattern SEMICOLON = Pattern.compile(";");
 
   @Override
   public void onCreate(Bundle icicle) {
@@ -84,7 +87,7 @@ public final class ZXingTestActivity extends Activity {
         PackageInfo info = getPackageManager().getPackageInfo(PACKAGE_NAME, 0);
         versionCode = info.versionCode;
         versionName = info.versionName;
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (PackageManager.NameNotFoundException ignored) {
         versionCode = 0;
         versionName = "unknown";
       }
@@ -138,13 +141,12 @@ public final class ZXingTestActivity extends Activity {
   private final Button.OnClickListener scanProduct = new Button.OnClickListener() {
     @Override
     public void onClick(View v) {
-      Intent intent = new Intent("com.google.zxing.client.android.SCAN");
-      intent.putExtra("SCAN_MODE", "PRODUCT_MODE");
-      intent.putExtra("SCAN_WIDTH", 800);
-      intent.putExtra("SCAN_HEIGHT", 200);
-      intent.putExtra("RESULT_DISPLAY_DURATION_MS", 3000L);
-      intent.putExtra("PROMPT_MESSAGE", "Custom prompt to scan a product");
-      startActivityForResult(intent, IntentIntegrator.REQUEST_CODE);
+      IntentIntegrator integrator = new IntentIntegrator(ZXingTestActivity.this);
+      integrator.addExtra("SCAN_WIDTH", 800);
+      integrator.addExtra("SCAN_HEIGHT", 200);
+      integrator.addExtra("RESULT_DISPLAY_DURATION_MS", 3000L);
+      integrator.addExtra("PROMPT_MESSAGE", "Custom prompt to scan a product");
+      integrator.initiateScan(IntentIntegrator.PRODUCT_CODE_TYPES);
     }
   };
 
@@ -227,11 +229,9 @@ public final class ZXingTestActivity extends Activity {
   private final Button.OnClickListener encodeHiddenData = new Button.OnClickListener() {
     @Override
     public void onClick(View v) {
-      Intent intent = new Intent("com.google.zxing.client.android.ENCODE");
-      intent.putExtra("ENCODE_TYPE", "TEXT_TYPE");
-      intent.putExtra("ENCODE_DATA", "SURPRISE!");
-      intent.putExtra("ENCODE_SHOW_CONTENTS", false);
-      startActivity(intent);
+      IntentIntegrator integrator = new IntentIntegrator(ZXingTestActivity.this);
+      integrator.addExtra("ENCODE_SHOW_CONTENTS", false);
+      integrator.shareText("SURPRISE!");
     }
   };
 
@@ -257,18 +257,15 @@ public final class ZXingTestActivity extends Activity {
     builder.show();
   }
 
-  private void encodeBarcode(String type, String data) {
-    Intent intent = new Intent("com.google.zxing.client.android.ENCODE");
-    intent.putExtra("ENCODE_TYPE", type);
-    intent.putExtra("ENCODE_DATA", data);
-    startActivity(intent);
+  private void encodeBarcode(CharSequence type, CharSequence data) {
+    IntentIntegrator integrator = new IntentIntegrator(this);
+    integrator.shareText(data, type);
   }
 
-  private void encodeBarcode(String type, Bundle data) {
-    Intent intent = new Intent("com.google.zxing.client.android.ENCODE");
-    intent.putExtra("ENCODE_TYPE", type);
-    intent.putExtra("ENCODE_DATA", data);
-    startActivity(intent);
+  private void encodeBarcode(CharSequence type, Bundle data) {
+    IntentIntegrator integrator = new IntentIntegrator(this);
+    integrator.addExtra("ENCODE_DATA", data);
+    integrator.shareText(data.toString(), type); // data.toString() isn't used
   }
 
   private static String getFlattenedParams() {
@@ -311,7 +308,7 @@ public final class ZXingTestActivity extends Activity {
     result.append("VERSION.SDK_INT=").append(Build.VERSION.SDK_INT).append('\n');
 
     String flattened = getFlattenedParams();
-    String[] params = flattened.split(";");
+    String[] params = SEMICOLON.split(flattened);
     Arrays.sort(params);
     for (String param : params) {
       result.append(param).append('\n');
@@ -324,10 +321,10 @@ public final class ZXingTestActivity extends Activity {
   }
 
   private static void writeStats(String resultString) {
+    File cameraParamsFile = new File(Environment.getExternalStorageDirectory().getPath() + "/CameraParameters.txt");
     Writer out = null;
     try {
-      out = new OutputStreamWriter(new FileOutputStream(new File("/sdcard/CameraParameters.txt")), 
-                                   Charset.forName("UTF-8"));
+      out = new OutputStreamWriter(new FileOutputStream(cameraParamsFile), Charset.forName("UTF-8"));
       out.write(resultString);
     } catch (IOException e) {
       Log.e(TAG, "Cannot write parameters file ", e);
